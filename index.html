@@ -773,12 +773,12 @@ textarea.m-input { min-height: 100px; resize: none; }
     // Firebase 콘솔 → 프로젝트 설정 → 앱 추가 → 웹
     // ══════════════════════════════════════════════
     const firebaseConfig = {
-      apiKey: "여기에_붙여넣기",
-      authDomain: "여기에_붙여넣기",
-      projectId: "여기에_붙여넣기",
-      storageBucket: "여기에_붙여넣기",
-      messagingSenderId: "여기에_붙여넣기",
-      appId: "여기에_붙여넣기"
+      apiKey: "AIzaSyBhBspbdqjZG2w1JTGbxjAwOZh5PCTF9AM",
+      authDomain: "ivyel-elingo.firebaseapp.com",
+      projectId: "ivyel-elingo",
+      storageBucket: "ivyel-elingo.firebasestorage.app",
+      messagingSenderId: "265463681271",
+      appId: "1:265463681271:web:6c203c3ce00fd9452b03f2"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -1476,12 +1476,6 @@ function showAppAfterLogin(userData) {
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
   }
-
-  // 학습창에서 돌아왔을 때 홈 탭으로 바로 이동
-  if (location.hash === '#home') {
-    history.replaceState(null, '', location.pathname); // URL에서 #home 제거
-    switchPage('home', document.querySelector('.nav-item'));
-  }
 }
 
 // ── Firebase 로그아웃 ──
@@ -1527,7 +1521,7 @@ function openModal(type, data) {
       <p style="font-size:0.88rem;font-weight:600;margin-bottom:.3rem;">${data}</p>
       <p style="font-size:0.78rem;color:var(--gray);margin-bottom:1rem;font-family:'Noto Serif KR',serif;font-weight:300;">텍스트로 작성하거나 파일을 첨부해서 제출하세요</p>
       <textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="5"></textarea>
-      <div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;transition:all .2s;"
+      <div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;transition:border-color .2s;"
         onclick="document.getElementById('hwFileInput').click()"
         ondragover="event.preventDefault();this.style.borderColor='var(--rose)'"
         ondragleave="this.style.borderColor='var(--light)'"
@@ -1536,7 +1530,7 @@ function openModal(type, data) {
         <div id="fileLabel" style="font-size:.78rem;color:var(--gray);">파일 첨부 — 사진, 음성, PDF (탭하거나 드래그)</div>
       </div>
       <input type="file" id="hwFileInput" accept="image/*,audio/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
-      <div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;display:flex;align-items:center;gap:.5rem;"></div>
+      <div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;align-items:center;gap:.5rem;"></div>
       <button class="m-btn" id="hwSubmitBtn" onclick="submitHomework('${data}')">제출하기 →</button>`;
 
   } else if (type === 'viewSubmissions') {
@@ -1551,7 +1545,7 @@ function openModal(type, data) {
     // ── 코치용: 피드백 작성 → Firebase 저장 ──
     title.textContent = `💌 ${data}님께 피드백`;
     body.innerHTML = `
-      <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;font-family:'Noto Serif KR',serif;font-weight:300;">작성한 피드백은 학생 앱에 바로 표시돼요</div>
+      <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성한 피드백은 학생 앱에 바로 표시돼요</div>
       <textarea id="feedbackText" class="m-input" rows="5" placeholder="오늘 수업 피드백을 남겨주세요...&#10;&#10;예) 발음이 많이 좋아졌어요! 특히 'th' 발음이 자연스러워졌어요 😊"></textarea>
       <button class="m-btn" onclick="submitFeedback('${data}')">피드백 전송하기 →</button>`;
 
@@ -1576,7 +1570,7 @@ function openModal(type, data) {
   overlay.classList.add('open');
 }
 
-// ── 파일 드래그 앤 드롭 ──
+// ── 파일 선택/드래그 처리 ──
 let selectedFile = null;
 function handleFileDrop(e) {
   e.preventDefault();
@@ -1591,10 +1585,9 @@ function handleFileSelect(input) {
 function showFilePreview(file) {
   selectedFile = file;
   const preview = document.getElementById('filePreview');
-  const icons = { 'image': '🖼️', 'audio': '🎵', 'application/pdf': '📄' };
-  const icon = Object.keys(icons).find(k => file.type.startsWith(k)) ? icons[Object.keys(icons).find(k => file.type.startsWith(k))] : '📎';
+  const icon = file.type.startsWith('image') ? '🖼️' : file.type.startsWith('audio') ? '🎵' : '📄';
   preview.style.display = 'flex';
-  preview.innerHTML = `${icon} <span style="flex:1">${file.name}</span> <span style="color:var(--gray)">${(file.size/1024).toFixed(0)}KB</span> <span onclick="removeFile()" style="cursor:pointer;color:var(--rose);font-weight:600;">✕</span>`;
+  preview.innerHTML = `${icon} <span style="flex:1">${file.name}</span><span style="color:var(--gray)">${(file.size/1024).toFixed(0)}KB</span><span onclick="removeFile()" style="cursor:pointer;color:var(--rose);font-weight:600;margin-left:.5rem;">✕</span>`;
   document.getElementById('fileLabel').textContent = '파일 선택됨 ✓';
 }
 function removeFile() {
@@ -1607,21 +1600,16 @@ function removeFile() {
 // ── 실제 Firebase 과제 제출 ──
 async function submitHomework(hwTitle) {
   const text = document.getElementById('hwText').value.trim();
-  if (!text && !selectedFile) {
-    showToast('내용을 입력하거나 파일을 첨부해주세요'); return;
-  }
+  if (!text && !selectedFile) { showToast('내용을 입력하거나 파일을 첨부해주세요'); return; }
 
   const btn = document.getElementById('hwSubmitBtn');
   btn.textContent = '제출 중...'; btn.disabled = true;
 
   try {
     const user = window._currentUser;
-    let fileUrl = null;
-    let fileName = null;
+    let fileUrl = null, fileName = null;
 
-    // 파일이 있으면 Firebase Storage에 업로드
     if (selectedFile) {
-      // Storage 모듈 동적 로드
       const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
       const storage = getStorage();
       const fileRef = ref(storage, `homework/${user.uid}/${Date.now()}_${selectedFile.name}`);
@@ -1630,7 +1618,6 @@ async function submitHomework(hwTitle) {
       fileName = selectedFile.name;
     }
 
-    // Firestore에 제출 데이터 저장
     await window._addDoc(window._collection(window._db, 'homework'), {
       studentUid: user.uid,
       studentName: user.name,
@@ -1638,7 +1625,7 @@ async function submitHomework(hwTitle) {
       text: text,
       fileUrl: fileUrl,
       fileName: fileName,
-      status: 'submitted',       // submitted → reviewed
+      status: 'submitted',
       feedback: null,
       submittedAt: window._serverTimestamp()
     });
@@ -1647,16 +1634,16 @@ async function submitHomework(hwTitle) {
     showToast('✅ 제출 완료! 코치님이 확인 후 피드백을 드려요 💌');
     selectedFile = null;
 
-    // 제출한 카드 상태 업데이트
+    // 카드 상태 업데이트
     document.querySelectorAll('.hw-card').forEach(card => {
-      if (card.querySelector('.hw-title') && card.querySelector('.hw-title').textContent.includes(hwTitle.slice(0,5))) {
+      const titleEl = card.querySelector('.hw-title');
+      if (titleEl && titleEl.textContent.includes(hwTitle.slice(0, 5))) {
         const statusEl = card.querySelector('.hw-status');
         if (statusEl) { statusEl.textContent = '✓ 제출 완료'; statusEl.className = 'hw-status done'; }
-        const btn = card.querySelector('.hw-submit-btn');
-        if (btn) { btn.textContent = '✓ 제출됨'; btn.disabled = true; btn.className = 'hw-submit-btn done-btn'; }
+        const submitBtn = card.querySelector('.hw-submit-btn');
+        if (submitBtn) { submitBtn.textContent = '✓ 제출됨'; submitBtn.disabled = true; submitBtn.className = 'hw-submit-btn done-btn'; }
       }
     });
-
   } catch (err) {
     console.error(err);
     showToast('제출에 실패했어요. 다시 시도해주세요.');
@@ -1684,11 +1671,11 @@ async function loadSubmissions(hwTitle) {
     snap.forEach(docSnap => {
       const d = docSnap.data();
       const date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
-      const fileBtn = d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;">📎 ${d.fileName}</a>` : '';
+      const fileBtn = d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin-bottom:.4rem;">📎 ${d.fileName}</a>` : '';
       const feedbackSection = d.feedback
         ? `<div style="background:var(--sage-light);border-radius:8px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;color:var(--sage);">💌 피드백: ${d.feedback}</div>`
         : `<button onclick="openFeedbackForSubmission('${docSnap.id}','${d.studentName}')"
-            style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;">
+            style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">
             피드백 작성
            </button>`;
       list.innerHTML += `
@@ -1698,8 +1685,7 @@ async function loadSubmissions(hwTitle) {
             <span style="font-size:.72rem;color:var(--gray);">${date}</span>
           </div>
           ${d.text ? `<div style="font-size:.82rem;color:var(--dark);line-height:1.6;margin-bottom:.4rem;">${d.text}</div>` : ''}
-          ${fileBtn}
-          ${feedbackSection}
+          ${fileBtn}${feedbackSection}
         </div>`;
     });
   } catch (err) {
@@ -1709,7 +1695,6 @@ async function loadSubmissions(hwTitle) {
 
 // ── 코치용: 제출물에 피드백 작성 ──
 function openFeedbackForSubmission(docId, studentName) {
-  const overlay = document.getElementById('modalOverlay');
   document.getElementById('modalTitle').textContent = `💌 ${studentName}님께 피드백`;
   document.getElementById('modalBody').innerHTML = `
     <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성하면 학생 앱에 바로 표시돼요</div>
@@ -1734,7 +1719,7 @@ async function saveFeedbackToDoc(docId, studentName) {
   }
 }
 
-// ── 학생용 피드백 전송 (코치 대시보드에서) ──
+// ── 코치 대시보드 피드백 전송 ──
 async function submitFeedback(studentName) {
   const text = document.getElementById('feedbackText').value.trim();
   if (!text) { showToast('피드백 내용을 입력해주세요'); return; }
