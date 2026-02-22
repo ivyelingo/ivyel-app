@@ -1616,3 +1616,10 @@ function showToast(msg) {
 </script>
 </body>
 </html>
+
+javascript// 페이지 로드 시 #home이면 로그인 건너뛰지 않고 홈 탭으로 이동
+window.addEventListener('load', function() {
+  if (location.hash === '#home' && window._currentUser) {
+    switchPage('home', null);
+  }
+});
