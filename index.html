@@ -1688,18 +1688,30 @@ async function submitHomework(hwTitle) {
     closeModal();
     showToast('✅ 제출 완료! 제출 완료 탭에서 확인하세요 💌');
     selectedFile = null;
+    // 제출한 카드 즉시 숨기기 + 배지 업데이트
     var cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
     var key = cardMap[hwTitle];
     if (key) {
-      var statusEl = document.getElementById('status-' + key);
-      var submitBtn = document.getElementById('submitBtn-' + key);
-      if (statusEl) { statusEl.textContent = '✓ 제출 완료'; statusEl.className = 'hw-status done'; }
-      if (submitBtn) { submitBtn.textContent = '✓ 제출됨'; submitBtn.disabled = true; submitBtn.className = 'hw-submit-btn done-btn'; }
+      var card = document.getElementById('hwcard-' + key);
+      if (card) card.style.display = 'none';
     }
     var pb = document.getElementById('pendingBadge');
     var db2 = document.getElementById('doneBadge');
-    if (pb) pb.textContent = Math.max(0, parseInt(pb.textContent) - 1);
+    var newPending = Math.max(0, parseInt(pb ? pb.textContent : 2) - 1);
+    if (pb) pb.textContent = newPending;
     if (db2) { db2.textContent = parseInt(db2.textContent || 0) + 1; db2.style.display = 'inline'; }
+
+    // 미제출 과제 모두 제출했으면 완료 메시지
+    if (newPending === 0) {
+      var pendingSection = document.getElementById('hw-pending-section');
+      if (pendingSection && !pendingSection.querySelector('.empty-pending-msg')) {
+        var emptyMsg = document.createElement('div');
+        emptyMsg.className = 'empty-pending-msg';
+        emptyMsg.style.cssText = 'text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;';
+        emptyMsg.textContent = '모든 과제를 제출했어요 🎉';
+        pendingSection.appendChild(emptyMsg);
+      }
+    }
   } catch(err) {
     showToast('제출에 실패했어요. 다시 시도해주세요.'); console.error(err);
     btn.textContent = '제출하기 →'; btn.disabled = false;
@@ -1767,25 +1779,61 @@ async function loadAllHomework() {
 async function restoreSubmittedStatus() {
   try {
     var user = window._currentUser;
-    var q = window._query(window._collection(window._db, 'homework'), window._where('studentUid', '==', user.uid));
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._where('studentUid', '==', user.uid)
+    );
     var snap = await window._getDocs(q);
     var cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
-    var count = 0;
+    var submittedTitles = [];
+
     snap.forEach(function(ds) {
-      count++;
-      var key = cardMap[ds.data().hwTitle];
-      if (key) {
-        var s = document.getElementById('status-' + key);
-        var b = document.getElementById('submitBtn-' + key);
-        if (s) { s.textContent = '✓ 제출 완료'; s.className = 'hw-status done'; }
-        if (b) { b.textContent = '✓ 제출됨'; b.disabled = true; b.className = 'hw-submit-btn done-btn'; }
+      submittedTitles.push(ds.data().hwTitle);
+    });
+
+    var submittedCount = submittedTitles.length;
+    var allCards = ['John 3장 필사', '자기소개 녹음'];
+
+    allCards.forEach(function(title) {
+      var key = cardMap[title];
+      if (!key) return;
+      var card = document.getElementById('hwcard-' + key);
+      if (!card) return;
+
+      if (submittedTitles.indexOf(title) !== -1) {
+        // 제출한 과제 → 미제출 탭에서 숨김
+        card.style.display = 'none';
+      } else {
+        // 미제출 과제 → 그대로 표시
+        card.style.display = 'block';
       }
     });
-    if (count > 0) {
-      var db2 = document.getElementById('doneBadge');
-      var pb = document.getElementById('pendingBadge');
-      if (db2) { db2.textContent = count; db2.style.display = 'inline'; }
-      if (pb) pb.textContent = Math.max(0, 2 - count);
+
+    // 배지 업데이트
+    var remaining = allCards.length - submittedCount;
+    var pb = document.getElementById('pendingBadge');
+    var db2 = document.getElementById('doneBadge');
+    if (pb) pb.textContent = remaining;
+    if (submittedCount > 0 && db2) {
+      db2.textContent = submittedCount;
+      db2.style.display = 'inline';
+    }
+
+    // 미제출 과제 없으면 완료 메시지
+    var pendingSection = document.getElementById('hw-pending-section');
+    if (pendingSection) {
+      var existing = pendingSection.querySelector('.empty-pending-msg');
+      if (remaining === 0) {
+        if (!existing) {
+          var emptyMsg = document.createElement('div');
+          emptyMsg.className = 'empty-pending-msg';
+          emptyMsg.style.cssText = 'text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;';
+          emptyMsg.textContent = '모든 과제를 제출했어요 🎉';
+          pendingSection.appendChild(emptyMsg);
+        }
+      } else {
+        if (existing) existing.remove();
+      }
     }
   } catch(err) { console.error(err); }
 }
