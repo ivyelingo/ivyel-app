@@ -1252,17 +1252,12 @@ textarea.m-input { min-height: 100px; resize: none; }
         <button class="s-action" onclick="openModal('feedback', '이미경')">피드백</button>
       </div>
 
-      <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">미제출 <em>숙제</em></div>
-      <div class="sec-sub" style="margin-bottom:0.8rem;">확인 필요</div>
+      <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">제출된 <em>과제</em></div>
+      <div class="sec-sub" style="margin-bottom:0.8rem;">학생 과제 확인 & AI 피드백</div>
 
-      <div class="hw-card">
-        <div class="hw-top">
-          <div class="hw-class">💬 회화</div>
-          <span class="hw-status pending">미확인 3명</span>
-        </div>
-        <div class="hw-title">자기소개 영어로 녹음하기</div>
-        <div class="hw-due">마감 <span>이번 주 금요일</span></div>
-        <button class="hw-submit-btn" onclick="showToast('제출 현황을 확인합니다')">제출 현황 보기</button>
+      <!-- 실시간 제출 목록 -->
+      <div id="coach-hw-list">
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
     </div>
 
@@ -1489,9 +1484,10 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
+    setTimeout(loadCoachSubmissions, 500);
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
@@ -1803,6 +1799,208 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── 코치: 전체 제출 목록 로드 ──
+async function loadCoachSubmissions() {
+  var listEl = document.getElementById('coach-hw-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var q = mod.query(mod.collection(window._db, 'homework'));
+    var snap = await mod.getDocs(q);
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">아직 제출된 과제가 없어요</div>';
+      return;
+    }
+    // 최신순 정렬
+    var docs = [];
+    snap.forEach(function(ds) { docs.push({ id: ds.id, data: ds.data() }); });
+    docs.sort(function(a, b) {
+      var ta = a.data.submittedAt ? a.data.submittedAt.seconds : 0;
+      var tb = b.data.submittedAt ? b.data.submittedAt.seconds : 0;
+      return tb - ta;
+    });
+
+    var html = ''; var unreviewed = 0;
+    docs.forEach(function(item) {
+      var d = item.data; var docId = item.id;
+      if (!d.feedback) unreviewed++;
+      var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+
+      var actionBtns = '';
+      if (!d.feedback) {
+        actionBtns = '<div style="display:flex;gap:.5rem;margin-top:.7rem;">'
+          + '<button onclick="openAiFeedbackModal(\'' + docId + '\',\'' + (d.studentName||'') + '\',`' + (d.text||'').replace(/`/g,"'") + '`,\'' + (d.hwTitle||'') + '\')" '
+          + 'style="flex:1;background:linear-gradient(135deg,var(--rose),var(--gold));color:white;border:none;border-radius:100px;padding:.5rem;font-size:.75rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✨ AI 피드백 보내기</button>'
+          + '<button onclick="openManualFeedbackModal(\'' + docId + '\',\'' + (d.studentName||'') + '\')" '
+          + 'style="flex:1;background:none;border:1.5px solid var(--light);border-radius:100px;padding:.5rem;font-size:.75rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;color:var(--charcoal);">✏️ 직접 작성</button>'
+          + '</div>';
+      } else {
+        actionBtns = '<div style="background:var(--sage-light);border-radius:10px;padding:.6rem 1rem;margin-top:.6rem;font-size:.78rem;color:#3a6b3e;">💌 학생 피드백: ' + d.feedback + '</div>'
+          + (d.coachNote ? '<div style="background:linear-gradient(135deg,var(--cream),var(--rose-light));border:1px solid var(--rose-light);border-radius:10px;padding:.6rem 1rem;margin-top:.4rem;font-size:.75rem;color:#8a4a3e;">🔒 코치 노트: ' + d.coachNote + '</div>' : '');
+      }
+
+      html += '<div class="hw-card">'
+        + '<div class="hw-top">'
+        + '<div class="hw-class">🎓 ' + (d.studentName||'학생') + '</div>'
+        + '<span class="hw-status ' + (d.feedback ? 'done' : 'pending') + '">' + (d.feedback ? '✓ 완료' : '미확인') + '</span>'
+        + '</div>'
+        + '<div class="hw-title" style="font-size:.95rem;">' + (d.hwTitle||'') + '</div>'
+        + (d.text ? '<div style="font-size:.82rem;line-height:1.6;margin:.4rem 0;color:var(--gray);">' + d.text + '</div>' : '')
+        + '<div style="font-size:.7rem;color:var(--gray);">제출일: ' + date + '</div>'
+        + actionBtns
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+
+    // 미확인 배지 업데이트
+    var statEls = document.querySelectorAll('.cs-num');
+    if (statEls[2]) statEls[2].textContent = unreviewed;
+  } catch(err) {
+    listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+// ── AI 피드백 모달 ──
+function openAiFeedbackModal(docId, studentName, hwText, hwTitle) {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = '✨ AI 피드백 생성';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:var(--cream);border-radius:12px;padding:.8rem 1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.6;">
+      <div style="font-size:.7rem;color:var(--rose);margin-bottom:.3rem;">📝 ${studentName}님의 제출 내용</div>
+      <div style="color:var(--charcoal);">${hwText || '(내용 없음)'}</div>
+    </div>
+
+    <div id="aiFeedbackResult" style="display:none;margin-bottom:1rem;">
+      <!-- 학생 전송용 -->
+      <div style="font-size:.7rem;font-weight:600;color:var(--sage);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem;">📨 학생에게 전송되는 내용</div>
+      <div id="feedbackForStudent" style="background:linear-gradient(135deg,var(--cream),#f0f7f0);border:1.5px solid var(--sage-light);border-radius:12px;padding:1rem;font-size:.83rem;line-height:1.8;color:var(--charcoal);white-space:pre-wrap;margin-bottom:.8rem;"></div>
+      <!-- 코치 전용 -->
+      <div style="font-size:.7rem;font-weight:600;color:var(--rose);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.4rem;">🔒 코치님만 보이는 내용</div>
+      <div id="feedbackForCoach" style="background:linear-gradient(135deg,var(--cream),var(--rose-light));border:1.5px solid var(--rose-light);border-radius:12px;padding:1rem;font-size:.83rem;line-height:1.8;color:var(--charcoal);white-space:pre-wrap;"></div>
+    </div>
+
+    <button class="m-btn" id="aiGenerateBtn" onclick="generateAiFeedback('${docId}','${studentName}',\`${hwText.replace(/`/g,"'")}\`,'${hwTitle}')">
+      ✨ AI 피드백 생성하기
+    </button>
+    <button id="aiSendBtn" style="display:none;width:100%;margin-top:.6rem;background:var(--sage);color:white;border:none;border-radius:100px;padding:.9rem;font-size:.88rem;font-family:'DM Sans',sans-serif;cursor:pointer;" onclick="sendAiFeedback('${docId}','${studentName}')">
+      💌 학생에게 전송하기
+    </button>`;
+  overlay.classList.add('open');
+}
+
+// ── Claude API로 AI 피드백 생성 ──
+async function generateAiFeedback(docId, studentName, hwText, hwTitle) {
+  var btn = document.getElementById('aiGenerateBtn');
+  var resultEl = document.getElementById('aiFeedbackResult');
+  btn.textContent = '생성 중...✨'; btn.disabled = true;
+  resultEl.style.display = 'none';
+
+  try {
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        system: `당신은 IVY·EL Elingo 영어 학습 코치의 AI 어시스턴트입니다.
+학생의 영어 과제를 검토하고 피드백을 두 파트로 나눠 JSON 형식으로만 반환하세요.
+다른 텍스트 없이 반드시 아래 JSON 형식만 반환하세요:
+{
+  "student": "학생에게 전달할 내용 (문법 교정 + 더 자연스러운 표현 제안만 포함. 한국어 설명 + 영어 예문 형식)",
+  "coach": "코치만 보는 내용 (칭찬&격려 포인트 + 다음 학습 방향 제안. 한국어로 간결하게)"
+}
+student 파트: 친근하고 따뜻한 톤. 틀린 부분은 구체적 수정 예문 포함. 자신감을 줄 것.
+coach 파트: 이 학생의 강점과 집중 보완 포인트, 다음 수업에서 활용할 방향 제안.`,
+        messages: [{
+          role: 'user',
+          content: `학생: ${studentName} / 과제: ${hwTitle}\n\n제출 내용:\n${hwText}`
+        }]
+      })
+    });
+
+    var data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    var raw = data.content[0].text.trim();
+    // JSON 파싱
+    var parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch(e) {
+      // JSON 파싱 실패 시 전체를 student 파트로
+      parsed = { student: raw, coach: '' };
+    }
+
+    document.getElementById('feedbackForStudent').textContent = parsed.student || '';
+    document.getElementById('feedbackForCoach').textContent = parsed.coach || '';
+    resultEl.style.display = 'block';
+    // 데이터 저장
+    resultEl.dataset.student = parsed.student || '';
+    resultEl.dataset.coach = parsed.coach || '';
+
+    btn.textContent = '🔄 다시 생성';
+    btn.disabled = false;
+    document.getElementById('aiSendBtn').style.display = 'block';
+  } catch(err) {
+    console.error(err);
+    showToast('AI 피드백 생성에 실패했어요. 다시 시도해주세요.');
+    btn.textContent = '✨ AI 피드백 생성하기';
+    btn.disabled = false;
+  }
+}
+
+// ── AI 피드백 Firestore에 저장 (학생용/코치용 분리) ──
+async function sendAiFeedback(docId, studentName) {
+  var resultEl = document.getElementById('aiFeedbackResult');
+  var studentFeedback = resultEl.dataset.student;
+  var coachNote = resultEl.dataset.coach;
+  if (!studentFeedback) return;
+  var sendBtn = document.getElementById('aiSendBtn');
+  sendBtn.textContent = '전송 중...'; sendBtn.disabled = true;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.updateDoc(mod.doc(window._db, 'homework', docId), {
+      feedback: studentFeedback,   // 학생에게 보이는 피드백
+      coachNote: coachNote,        // 코치만 보는 노트
+      feedbackAt: mod.serverTimestamp(),
+      status: 'reviewed'
+    });
+    closeModal();
+    showToast('✅ ' + studentName + '님께 AI 피드백을 전송했어요!');
+    loadCoachSubmissions();
+  } catch(err) {
+    showToast('전송에 실패했어요.');
+    sendBtn.textContent = '💌 학생에게 전송하기'; sendBtn.disabled = false;
+  }
+}
+
+// ── 코치 직접 피드백 작성 ──
+function openManualFeedbackModal(docId, studentName) {
+  document.getElementById('modalTitle').textContent = '✏️ ' + studentName + '님께 피드백';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">직접 작성한 피드백이 학생 앱에 바로 표시돼요</div>
+    <textarea id="manualFbText" class="m-input" rows="5" placeholder="피드백을 남겨주세요..."></textarea>
+    <button class="m-btn" onclick="sendManualFeedback('${docId}','${studentName}')">전송하기 →</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+async function sendManualFeedback(docId, studentName) {
+  var text = document.getElementById('manualFbText').value.trim();
+  if (!text) { showToast('피드백 내용을 입력해주세요'); return; }
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.updateDoc(mod.doc(window._db, 'homework', docId), {
+      feedback: text,
+      feedbackAt: mod.serverTimestamp(),
+      status: 'reviewed'
+    });
+    closeModal();
+    showToast('✅ ' + studentName + '님께 피드백을 전송했어요!');
+    loadCoachSubmissions();
+  } catch(err) { showToast('전송에 실패했어요.'); }
 }
 </script>
 </body>
