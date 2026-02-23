@@ -1596,22 +1596,27 @@ async function loadMySubmissions() {
     var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     var q = mod.query(
       mod.collection(window._db, 'homework'),
-      mod.where('studentUid', '==', user.uid),
-      mod.orderBy('submittedAt', 'desc')
+      mod.where('studentUid', '==', user.uid)
     );
     _mySubUnsub = mod.onSnapshot(q, function(snap) {
-      // 배지 업데이트
-      var doneTab = document.querySelector('.hw-tab[data-tab="done"]');
-      var doneBadge = document.getElementById('doneBadge');
-      if (snap.empty) {
+      // 날짜 기준 내림차순 정렬 (JS에서 처리, Firestore 복합 인덱스 불필요)
+      var docs = [];
+      snap.forEach(function(ds) { docs.push({ id: ds.id, data: ds.data() }); });
+      docs.sort(function(a, b) {
+        var ta = a.data.submittedAt ? a.data.submittedAt.seconds : 0;
+        var tb = b.data.submittedAt ? b.data.submittedAt.seconds : 0;
+        return tb - ta;
+      });
+      if (docs.length === 0) {
         listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">아직 제출한 과제가 없어요</div>';
+        var doneBadge = document.getElementById('doneBadge');
         if (doneBadge) doneBadge.style.display = 'none';
         return;
       }
       var html = ''; var count = 0;
-      snap.forEach(function(ds) {
+      docs.forEach(function(item) {
         count++;
-        var d = ds.data();
+        var d = item.data;
         var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
         var fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
         var fbBox = d.feedback
@@ -1626,6 +1631,7 @@ async function loadMySubmissions() {
           + fbBox + '</div>';
       });
       listEl.innerHTML = html;
+      var doneBadge = document.getElementById('doneBadge');
       if (doneBadge) { doneBadge.textContent = count; doneBadge.style.display = 'inline'; }
     }, function(err) {
       listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
