@@ -1347,10 +1347,11 @@ textarea.m-input { min-height: 100px; resize: none; }
 <script>
 let currentRole = 'student';
 let currentPage = 'home';
+let selectedFile = null;
 
 // ── 탭 전환 ──
 function switchAuthTab(tab) {
-  const isLogin = tab === 'login';
+  var isLogin = tab === 'login';
   document.getElementById('formLogin').style.display = isLogin ? 'block' : 'none';
   document.getElementById('formSignup').style.display = isLogin ? 'none' : 'block';
   document.getElementById('tabLogin').style.background = isLogin ? 'var(--charcoal)' : 'var(--warm)';
@@ -1361,29 +1362,26 @@ function switchAuthTab(tab) {
 
 function selectRole(role, el) {
   currentRole = role;
-  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.role-btn').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
 }
 
 // ── Firebase 로그인 ──
 async function doLogin() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const errEl = document.getElementById('loginError');
+  var email = document.getElementById('loginEmail').value.trim();
+  var password = document.getElementById('loginPassword').value;
+  var errEl = document.getElementById('loginError');
   errEl.style.display = 'none';
-
   if (!email || !password) {
     errEl.textContent = '이메일과 비밀번호를 입력해주세요.';
     errEl.style.display = 'block'; return;
   }
-
   try {
-    const btn = document.querySelector('#formLogin .login-btn');
+    var btn = document.querySelector('#formLogin .login-btn');
     btn.textContent = '로그인 중...'; btn.disabled = true;
     await window._signIn(window._auth, email, password);
-    // onAuthStateChanged가 자동으로 화면 전환 처리
-  } catch (err) {
-    const msgs = {
+  } catch(err) {
+    var msgs = {
       'auth/user-not-found': '등록되지 않은 이메일이에요.',
       'auth/wrong-password': '비밀번호가 틀렸어요.',
       'auth/invalid-email': '이메일 형식이 올바르지 않아요.',
@@ -1392,54 +1390,46 @@ async function doLogin() {
     };
     errEl.textContent = msgs[err.code] || '로그인에 실패했어요. 다시 시도해주세요.';
     errEl.style.display = 'block';
-    const btn = document.querySelector('#formLogin .login-btn');
-    btn.textContent = '로그인'; btn.disabled = false;
+    var btn2 = document.querySelector('#formLogin .login-btn');
+    btn2.textContent = '로그인'; btn2.disabled = false;
   }
 }
 
 // ── Firebase 회원가입 ──
 async function doSignup() {
-  const name = document.getElementById('signupName').value.trim();
-  const email = document.getElementById('signupEmail').value.trim();
-  const password = document.getElementById('signupPassword').value;
-  const errEl = document.getElementById('signupError');
+  var name = document.getElementById('signupName').value.trim();
+  var email = document.getElementById('signupEmail').value.trim();
+  var password = document.getElementById('signupPassword').value;
+  var errEl = document.getElementById('signupError');
   errEl.style.display = 'none';
-
   if (!name || !email || !password) {
     errEl.textContent = '모든 항목을 입력해주세요.'; errEl.style.display = 'block'; return;
   }
   if (password.length < 6) {
     errEl.textContent = '비밀번호는 6자 이상이어야 해요.'; errEl.style.display = 'block'; return;
   }
-
   try {
-    const btn = document.querySelector('#formSignup .login-btn');
+    var btn = document.querySelector('#formSignup .login-btn');
     btn.textContent = '가입 중...'; btn.disabled = true;
-
-    // Firebase Auth 계정 생성
-    const cred = await window._createUser(window._auth, email, password);
-
-    // Firestore에 사용자 정보 저장
+    var cred = await window._createUser(window._auth, email, password);
     await window._setDoc(window._doc(window._db, 'users', cred.user.uid), {
       name: name,
       email: email,
-      role: currentRole,         // 'student' 또는 'coach'
+      role: currentRole,
       createdAt: window._serverTimestamp(),
       package: currentRole === 'coach' ? '관리자' : 'Seed 패키지'
     });
-
     showToast('✅ 가입 완료! 환영해요 ' + name + '님 🎉');
-    // onAuthStateChanged가 자동으로 화면 전환
-  } catch (err) {
-    const msgs = {
+  } catch(err) {
+    var msgs = {
       'auth/email-already-in-use': '이미 사용 중인 이메일이에요.',
       'auth/invalid-email': '이메일 형식이 올바르지 않아요.',
       'auth/weak-password': '비밀번호가 너무 짧아요 (6자 이상).'
     };
     errEl.textContent = msgs[err.code] || '가입에 실패했어요. 다시 시도해주세요.';
     errEl.style.display = 'block';
-    const btn = document.querySelector('#formSignup .login-btn');
-    btn.textContent = '회원가입'; btn.disabled = false;
+    var btn2 = document.querySelector('#formSignup .login-btn');
+    btn2.textContent = '회원가입'; btn2.disabled = false;
   }
 }
 
@@ -1447,11 +1437,9 @@ async function doSignup() {
 function showAppAfterLogin(userData) {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('app').classList.add('show');
-
-  const name = userData.name || '학생';
-  const role = userData.role || 'student';
-  const initial = name.charAt(0);
-
+  var name = userData.name || '학생';
+  var role = userData.role || 'student';
+  var initial = name.charAt(0);
   document.getElementById('topName').textContent = name;
   document.getElementById('topRole').textContent = role === 'coach' ? '코치' : '학생';
   document.getElementById('topAvatar').textContent = initial;
@@ -1459,250 +1447,215 @@ function showAppAfterLogin(userData) {
   document.getElementById('profileName').textContent = name;
   document.getElementById('profileAvatar').textContent = initial;
   document.getElementById('profilePackage').textContent = '✦ ' + (userData.package || 'Seed 패키지');
-
   if (role === 'coach') {
-    // 코치 탭 추가 (중복 방지)
     if (!document.getElementById('coachNavBtn')) {
-      const lastNav = document.getElementById('lastNavItem');
-      const coachNav = document.createElement('button');
+      var lastNav = document.getElementById('lastNavItem');
+      var coachNav = document.createElement('button');
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
       coachNav.onclick = function() { switchPage('coach', this); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
-  }
-
-  // 코치면 제출목록 자동 로드
-  if (role === 'coach') {
     setTimeout(loadCoachSubmissions, 500);
   } else {
-    // 학생이면 이미 제출한 과제 상태 복원
     setTimeout(restoreSubmittedStatus, 500);
   }
 }
 
-// 학생 로그인 시 이미 제출한 과제 상태 복원
-async function restoreSubmittedStatus() {
-  try {
-    const user = window._currentUser;
-    const q = window._query(
-      window._collection(window._db, 'homework'),
-      window._where('studentUid', '==', user.uid)
-    );
-    const snap = await window._getDocs(q);
-    const cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
-    let submittedCount = 0;
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const key = cardMap[d.hwTitle];
-      submittedCount++;
-      if (key) {
-        const statusEl = document.getElementById('status-' + key);
-        const submitBtn = document.getElementById('submitBtn-' + key);
-        if (statusEl) { statusEl.textContent = '✓ 제출 완료'; statusEl.className = 'hw-status done'; }
-        if (submitBtn) { submitBtn.textContent = '✓ 제출됨'; submitBtn.disabled = true; submitBtn.className = 'hw-submit-btn done-btn'; }
-      }
-    });
-    if (submittedCount > 0) {
-      const badge = document.getElementById('doneBadge');
-      if (badge) { badge.textContent = submittedCount; badge.style.display = 'inline'; }
-      const pendingBadge = document.getElementById('pendingBadge');
-      const remaining = Math.max(0, 2 - submittedCount);
-      if (pendingBadge) pendingBadge.textContent = remaining;
-    }
-  } catch(err) { console.error(err); }
-}
-
-// ── Firebase 로그아웃 ──
+// ── 로그아웃 ──
 async function doLogout() {
   await window._signOut(window._auth);
-  // onAuthStateChanged가 자동으로 로그인 화면으로 전환
 }
 
+// ── 페이지 전환 ──
 function switchPage(name, navEl) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
   if (navEl) navEl.classList.add('active');
   currentPage = name;
 }
 
+// ── 수업 필터 ──
 function cfFilter(type, el) {
-  document.querySelectorAll('.cf-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cf-btn').forEach(function(b) { b.classList.remove('active'); });
   el.classList.add('active');
-  document.querySelectorAll('.class-card').forEach(c => {
+  document.querySelectorAll('.class-card').forEach(function(c) {
     c.style.display = (type === 'all' || c.dataset.type === type) ? 'block' : 'none';
   });
 }
 
+// ── 숙제 탭 ──
 function hwTab(type, el) {
-  document.querySelectorAll('.hw-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.hw-tab').forEach(function(t) { t.classList.remove('active'); });
   el.classList.add('active');
-
-  const pending = document.getElementById('hw-pending-section');
-  const done = document.getElementById('hw-done-section');
-  const all = document.getElementById('hw-all-section');
-
-  pending.style.display = 'none';
-  done.style.display = 'none';
-  all.style.display = 'none';
-
+  var pending = document.getElementById('hw-pending-section');
+  var done = document.getElementById('hw-done-section');
+  var all = document.getElementById('hw-all-section');
+  if (pending) pending.style.display = 'none';
+  if (done) done.style.display = 'none';
+  if (all) all.style.display = 'none';
   if (type === 'pending') {
-    pending.style.display = 'block';
+    if (pending) pending.style.display = 'block';
   } else if (type === 'done') {
-    done.style.display = 'block';
+    if (done) done.style.display = 'block';
     loadMySubmissions();
   } else if (type === 'all') {
-    all.style.display = 'block';
+    if (all) all.style.display = 'block';
     loadAllHomework();
   }
 }
 
-// 내 제출 완료 목록 Firebase에서 불러오기
+// ── 내 제출 완료 목록 ──
 async function loadMySubmissions() {
-  const listEl = document.getElementById('hw-done-list');
+  var listEl = document.getElementById('hw-done-list');
+  if (!listEl) return;
   listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
   try {
-    const user = window._currentUser;
-    const q = window._query(
+    var user = window._currentUser;
+    var q = window._query(
       window._collection(window._db, 'homework'),
       window._where('studentUid', '==', user.uid),
       window._orderBy('submittedAt', 'desc')
     );
-    const snap = await window._getDocs(q);
+    var snap = await window._getDocs(q);
     if (snap.empty) {
       listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">아직 제출한 과제가 없어요</div>';
       return;
     }
-    listEl.innerHTML = '';
-    let count = 0;
-    snap.forEach(docSnap => {
+    var html = '';
+    var count = 0;
+    snap.forEach(function(docSnap) {
       count++;
-      const d = docSnap.data();
-      const date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
-      const fileBtn = d.fileUrl ? `<a href="${d.fileUrl}" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ${d.fileName}</a>` : '';
-      const feedbackBox = d.feedback
-        ? `<div style="background:var(--sage-light);border-radius:10px;padding:.7rem 1rem;margin-top:.6rem;font-size:.82rem;line-height:1.6;color:#3a6b3e;">💌 <b>코치 피드백:</b><br>${d.feedback}</div>`
-        : `<div style="background:var(--gold-light);border-radius:10px;padding:.6rem 1rem;margin-top:.6rem;font-size:.78rem;color:#8a6a30;">⏳ 코치님이 확인 중이에요</div>`;
-      listEl.innerHTML += `
-        <div class="hw-card">
-          <div class="hw-top">
-            <div class="hw-class">✓ ${d.hwTitle}</div>
-            <span class="hw-status done">${d.status === 'reviewed' ? '✓ 피드백 완료' : '✓ 제출 완료'}</span>
-          </div>
-          ${d.text ? `<div style="font-size:.84rem;line-height:1.7;margin:.5rem 0;color:var(--dark);">${d.text}</div>` : ''}
-          ${fileBtn}
-          <div style="font-size:.72rem;color:var(--gray);margin-top:.3rem;">제출일: ${date}</div>
-          ${feedbackBox}
-        </div>`;
+      var d = docSnap.data();
+      var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
+      var feedbackBox = d.feedback
+        ? '<div style="background:var(--sage-light);border-radius:10px;padding:.7rem 1rem;margin-top:.6rem;font-size:.82rem;line-height:1.6;color:#3a6b3e;">💌 <b>코치 피드백:</b><br>' + d.feedback + '</div>'
+        : '<div style="background:var(--gold-light);border-radius:10px;padding:.6rem 1rem;margin-top:.6rem;font-size:.78rem;color:#8a6a30;">⏳ 코치님이 확인 중이에요</div>';
+      var statusLabel = d.status === 'reviewed' ? '✓ 피드백 완료' : '✓ 제출 완료';
+      html += '<div class="hw-card">'
+        + '<div class="hw-top"><div class="hw-class">✓ ' + d.hwTitle + '</div>'
+        + '<span class="hw-status done">' + statusLabel + '</span></div>'
+        + (d.text ? '<div style="font-size:.84rem;line-height:1.7;margin:.5rem 0;color:var(--dark);">' + d.text + '</div>' : '')
+        + fileBtn
+        + '<div style="font-size:.72rem;color:var(--gray);margin-top:.3rem;">제출일: ' + date + '</div>'
+        + feedbackBox + '</div>';
     });
-    // 배지 업데이트
-    const badge = document.getElementById('doneBadge');
-    badge.textContent = count;
-    badge.style.display = 'inline';
+    listEl.innerHTML = html;
+    var badge = document.getElementById('doneBadge');
+    if (badge) { badge.textContent = count; badge.style.display = 'inline'; }
   } catch(err) {
     listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패. 다시 시도해주세요.</div>';
     console.error(err);
   }
 }
 
-// 전체 보기: 미제출 + 제출완료 합치기
+// ── 전체 보기 ──
 async function loadAllHomework() {
-  const listEl = document.getElementById('hw-all-list');
+  var listEl = document.getElementById('hw-all-list');
+  if (!listEl) return;
   listEl.innerHTML = '';
-
-  // 미제출 카드 복사
-  ['hwcard-john','hwcard-intro'].forEach(id => {
-    const card = document.getElementById(id);
+  var cards = ['hwcard-john', 'hwcard-intro'];
+  cards.forEach(function(id) {
+    var card = document.getElementById(id);
     if (card) listEl.appendChild(card.cloneNode(true));
   });
-
-  // 제출완료 불러오기
   try {
-    const user = window._currentUser;
-    const q = window._query(
+    var user = window._currentUser;
+    var q = window._query(
       window._collection(window._db, 'homework'),
       window._where('studentUid', '==', user.uid),
       window._orderBy('submittedAt', 'desc')
     );
-    const snap = await window._getDocs(q);
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
-      listEl.innerHTML += `
-        <div class="hw-card">
-          <div class="hw-top">
-            <div class="hw-class">✓ ${d.hwTitle}</div>
-            <span class="hw-status done">✓ 제출 완료</span>
-          </div>
-          ${d.text ? `<div style="font-size:.84rem;line-height:1.7;margin:.4rem 0;">${d.text}</div>` : ''}
-          <div style="font-size:.72rem;color:var(--gray);">제출일: ${date}</div>
-          ${d.feedback ? `<div style="background:var(--sage-light);border-radius:10px;padding:.6rem 1rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 ${d.feedback}</div>` : ''}
-        </div>`;
+    var snap = await window._getDocs(q);
+    snap.forEach(function(docSnap) {
+      var d = docSnap.data();
+      var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var fb = d.feedback ? '<div style="background:var(--sage-light);border-radius:10px;padding:.6rem 1rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 ' + d.feedback + '</div>' : '';
+      listEl.innerHTML += '<div class="hw-card">'
+        + '<div class="hw-top"><div class="hw-class">✓ ' + d.hwTitle + '</div><span class="hw-status done">✓ 제출 완료</span></div>'
+        + (d.text ? '<div style="font-size:.84rem;line-height:1.7;margin:.4rem 0;">' + d.text + '</div>' : '')
+        + '<div style="font-size:.72rem;color:var(--gray);">제출일: ' + date + '</div>'
+        + fb + '</div>';
     });
   } catch(err) { console.error(err); }
 }
 
-function openModal(type, data) {
-  const overlay = document.getElementById('modalOverlay');
-  const title = document.getElementById('modalTitle');
-  const body = document.getElementById('modalBody');
+// ── 제출 상태 복원 (학생 로그인 시) ──
+async function restoreSubmittedStatus() {
+  try {
+    var user = window._currentUser;
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._where('studentUid', '==', user.uid)
+    );
+    var snap = await window._getDocs(q);
+    var cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
+    var count = 0;
+    snap.forEach(function(docSnap) {
+      count++;
+      var d = docSnap.data();
+      var key = cardMap[d.hwTitle];
+      if (key) {
+        var statusEl = document.getElementById('status-' + key);
+        var submitBtn = document.getElementById('submitBtn-' + key);
+        if (statusEl) { statusEl.textContent = '✓ 제출 완료'; statusEl.className = 'hw-status done'; }
+        if (submitBtn) { submitBtn.textContent = '✓ 제출됨'; submitBtn.disabled = true; submitBtn.className = 'hw-submit-btn done-btn'; }
+      }
+    });
+    if (count > 0) {
+      var badge = document.getElementById('doneBadge');
+      if (badge) { badge.textContent = count; badge.style.display = 'inline'; }
+      var pb = document.getElementById('pendingBadge');
+      if (pb) pb.textContent = Math.max(0, 2 - count);
+    }
+  } catch(err) { console.error(err); }
+}
 
-  if (type === 'submit') {
-    title.textContent = '📎 과제 제출';
-    body.innerHTML = `
-      <p style="font-size:0.88rem;font-weight:600;margin-bottom:.3rem;">${data}</p>
-      <p style="font-size:0.78rem;color:var(--gray);margin-bottom:1rem;font-family:'Noto Serif KR',serif;font-weight:300;">텍스트로 작성하거나 파일을 첨부해서 제출하세요</p>
-      <textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="5"></textarea>
-      <div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;transition:border-color .2s;"
-        onclick="document.getElementById('hwFileInput').click()"
-        ondragover="event.preventDefault();this.style.borderColor='var(--rose)'"
-        ondragleave="this.style.borderColor='var(--light)'"
-        ondrop="handleFileDrop(event)">
-        <div style="font-size:1.5rem;margin-bottom:.3rem;">📎</div>
-        <div id="fileLabel" style="font-size:.78rem;color:var(--gray);">파일 첨부 — 사진, 음성, PDF (탭하거나 드래그)</div>
-      </div>
-      <input type="file" id="hwFileInput" accept="image/*,audio/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
-      <div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;align-items:center;gap:.5rem;"></div>
-      <button class="m-btn" id="hwSubmitBtn" onclick="submitHomework('${data}')">제출하기 →</button>`;
-
-  } else if (type === 'viewSubmissions') {
-    title.textContent = '📋 ' + data + ' 제출 현황';
-    body.innerHTML = '<div id="submissionList" style="min-height:80px;"><div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div></div>';
-    overlay.classList.add('open');
-    loadSubmissions(data);
-    return;
-
-  } else if (type === 'feedback') {
-    title.textContent = '💌 ' + data + '님께 피드백';
-    body.innerHTML = `
-      <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성한 피드백은 학생 앱에 바로 표시돼요</div>
-      <textarea id="feedbackText" class="m-input" rows="5" placeholder="오늘 수업 피드백을 남겨주세요..."></textarea>
-      <button class="m-btn" onclick="submitFeedback('${data}')">피드백 전송하기 →</button>`;
-
-  } else if (type === 'enroll') {
-    title.textContent = '수강 신청';
-    body.innerHTML = `
-      <div style="background:var(--cream);border-radius:12px;padding:1rem;margin-bottom:1rem;font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;">${data}</div>
-      <input class="m-input" type="text" placeholder="이름">
-      <input class="m-input" type="text" placeholder="연락처">
-      <select class="m-input"><option>온라인 (Zoom)</option><option>대면</option><option>상관없음</option></select>
-      <textarea class="m-input" rows="2" placeholder="남기실 말씀 (선택)"></textarea>
-      <button class="m-btn" onclick="closeModal();showToast('✅ 신청 완료! 1-2일 내 연락드릴게요 💌')">신청하기</button>`;
-
-  } else if (type === 'write') {
-    title.textContent = '✍️ 글 쓰기';
-    body.innerHTML = `
-      <select class="m-input"><option>📖 성경영어</option><option>💬 회화</option><option>🌱 일반</option><option>❓ 질문</option></select>
-      <textarea class="m-input" rows="5" placeholder="오늘의 영어 한마디, 나눔, 질문을 자유롭게 써주세요..."></textarea>
-      <button class="m-btn" onclick="closeModal();showToast('✅ 게시글이 등록되었어요!')">게시하기</button>`;
-  }
-  overlay.classList.add('open');
+// ── 코치: 전체 제출목록 로드 ──
+async function loadCoachSubmissions() {
+  var listEl = document.getElementById('coach-hw-list');
+  if (!listEl) return;
+  try {
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._orderBy('submittedAt', 'desc')
+    );
+    var snap = await window._getDocs(q);
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">아직 제출된 과제가 없어요</div>';
+      return;
+    }
+    var html = '';
+    var unreviewed = 0;
+    snap.forEach(function(docSnap) {
+      var d = docSnap.data();
+      if (!d.feedback) unreviewed++;
+      var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
+      var fbSection = d.feedback
+        ? '<div style="background:var(--sage-light);border-radius:8px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 ' + d.feedback + '</div>'
+        : '<button onclick="openFeedbackForSubmission('' + docSnap.id + '','' + d.studentName + '')" style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">피드백 작성</button>';
+      var statusClass = d.feedback ? 'done' : 'pending';
+      var statusLabel = d.feedback ? '✓ 피드백 완료' : '미확인';
+      html += '<div class="hw-card">'
+        + '<div class="hw-top"><div class="hw-class">🎓 ' + d.studentName + '</div>'
+        + '<span class="hw-status ' + statusClass + '">' + statusLabel + '</span></div>'
+        + '<div class="hw-title">' + d.hwTitle + '</div>'
+        + (d.text ? '<div style="font-size:.82rem;line-height:1.6;margin:.5rem 0;color:var(--dark);">' + d.text + '</div>' : '')
+        + fileBtn
+        + '<div style="font-size:.72rem;color:var(--gray);margin-bottom:.3rem;">제출일: ' + date + '</div>'
+        + fbSection + '</div>';
+    });
+    listEl.innerHTML = html;
+    var statEls = document.querySelectorAll('.cs-num');
+    if (statEls[2]) statEls[2].textContent = unreviewed;
+  } catch(err) { console.error(err); }
 }
 
 // ── 파일 처리 ──
-let selectedFile = null;
 function handleFileDrop(e) {
   e.preventDefault();
   document.getElementById('fileDropZone').style.borderColor = 'var(--light)';
@@ -1713,10 +1666,12 @@ function handleFileSelect(input) {
 }
 function showFilePreview(file) {
   selectedFile = file;
-  const icon = file.type.startsWith('image') ? '🖼️' : file.type.startsWith('audio') ? '🎵' : '📄';
-  const preview = document.getElementById('filePreview');
+  var icon = file.type.startsWith('image') ? '🖼️' : file.type.startsWith('audio') ? '🎵' : '📄';
+  var preview = document.getElementById('filePreview');
   preview.style.display = 'flex';
-  preview.innerHTML = icon + ' <span style="flex:1">' + file.name + '</span><span style="color:var(--gray)">' + (file.size/1024).toFixed(0) + 'KB</span><span onclick="removeFile()" style="cursor:pointer;color:var(--rose);font-weight:600;margin-left:.5rem;">✕</span>';
+  preview.innerHTML = icon + ' <span style="flex:1">' + file.name + '</span>'
+    + '<span style="color:var(--gray)">' + (file.size/1024).toFixed(0) + 'KB</span>'
+    + '<span onclick="removeFile()" style="cursor:pointer;color:var(--rose);font-weight:600;margin-left:.5rem;">✕</span>';
   document.getElementById('fileLabel').textContent = '파일 선택됨 ✓';
 }
 function removeFile() {
@@ -1726,27 +1681,23 @@ function removeFile() {
   document.getElementById('hwFileInput').value = '';
 }
 
-// ── 실제 Firebase 과제 제출 ──
+// ── 과제 제출 ──
 async function submitHomework(hwTitle) {
-  const text = document.getElementById('hwText').value.trim();
+  var text = document.getElementById('hwText').value.trim();
   if (!text && !selectedFile) { showToast('내용을 입력하거나 파일을 첨부해주세요'); return; }
-
-  const btn = document.getElementById('hwSubmitBtn');
+  var btn = document.getElementById('hwSubmitBtn');
   btn.textContent = '제출 중...'; btn.disabled = true;
-
   try {
-    const user = window._currentUser;
-    let fileUrl = null, fileName = null;
-
+    var user = window._currentUser;
+    var fileUrl = null, fileName = null;
     if (selectedFile) {
-      const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
-      const storage = getStorage();
-      const fileRef = ref(storage, 'homework/' + user.uid + '/' + Date.now() + '_' + selectedFile.name);
-      await uploadBytes(fileRef, selectedFile);
-      fileUrl = await getDownloadURL(fileRef);
+      var storMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
+      var storage = storMod.getStorage();
+      var fileRef = storMod.ref(storage, 'homework/' + user.uid + '/' + Date.now() + '_' + selectedFile.name);
+      await storMod.uploadBytes(fileRef, selectedFile);
+      fileUrl = await storMod.getDownloadURL(fileRef);
       fileName = selectedFile.name;
     }
-
     await window._addDoc(window._collection(window._db, 'homework'), {
       studentUid: user.uid,
       studentName: user.name,
@@ -1758,30 +1709,21 @@ async function submitHomework(hwTitle) {
       feedback: null,
       submittedAt: window._serverTimestamp()
     });
-
     closeModal();
     showToast('✅ 제출 완료! 제출 완료 탭에서 확인하세요 💌');
     selectedFile = null;
-
-    // 해당 카드 상태 업데이트
-    const cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
-    const key = cardMap[hwTitle];
+    var cardMap = {'John 3장 필사': 'john', '자기소개 녹음': 'intro'};
+    var key = cardMap[hwTitle];
     if (key) {
-      const statusEl = document.getElementById('status-' + key);
-      const submitBtn = document.getElementById('submitBtn-' + key);
+      var statusEl = document.getElementById('status-' + key);
+      var submitBtn = document.getElementById('submitBtn-' + key);
       if (statusEl) { statusEl.textContent = '✓ 제출 완료'; statusEl.className = 'hw-status done'; }
       if (submitBtn) { submitBtn.textContent = '✓ 제출됨'; submitBtn.disabled = true; submitBtn.className = 'hw-submit-btn done-btn'; }
     }
-
-    // 미제출 배지 업데이트
-    const pendingBtns = document.querySelectorAll('#hw-pending-section .hw-submit-btn:not(.done-btn):not(:disabled)');
-    document.getElementById('pendingBadge').textContent = pendingBtns.length;
-
-    // 제출완료 배지 업데이트
-    const doneBadge = document.getElementById('doneBadge');
-    doneBadge.textContent = parseInt(doneBadge.textContent || 0) + 1;
-    doneBadge.style.display = 'inline';
-
+    var pb = document.getElementById('pendingBadge');
+    var db2 = document.getElementById('doneBadge');
+    if (pb) pb.textContent = Math.max(0, parseInt(pb.textContent) - 1);
+    if (db2) { db2.textContent = parseInt(db2.textContent || 0) + 1; db2.style.display = 'inline'; }
   } catch(err) {
     console.error(err);
     showToast('제출에 실패했어요. 다시 시도해주세요.');
@@ -1789,108 +1731,33 @@ async function submitHomework(hwTitle) {
   }
 }
 
-// ── 코치용: 전체 제출 목록 불러오기 ──
-async function loadSubmissions(hwTitle) {
-  try {
-    const q = window._query(
-      window._collection(window._db, 'homework'),
-      window._where('hwTitle', '==', hwTitle),
-      window._orderBy('submittedAt', 'desc')
-    );
-    const snap = await window._getDocs(q);
-    const list = document.getElementById('submissionList');
-    if (snap.empty) {
-      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">아직 제출한 학생이 없어요</div>';
-      return;
-    }
-    list.innerHTML = '';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      const date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
-      const fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
-      const feedbackSection = d.feedback
-        ? '<div style="background:var(--sage-light);border-radius:8px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 피드백 완료: ' + d.feedback + '</div>'
-        : '<button onclick="openFeedbackForSubmission('' + docSnap.id + '','' + d.studentName + '')" style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">피드백 작성</button>';
-      list.innerHTML += '<div style="border:1.5px solid var(--light);border-radius:12px;padding:1rem;margin-bottom:.8rem;">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">' +
-        '<span style="font-weight:600;font-size:.9rem;">🎓 ' + d.studentName + '</span>' +
-        '<span style="font-size:.72rem;color:var(--gray);">' + date + '</span></div>' +
-        (d.text ? '<div style="font-size:.82rem;color:var(--dark);line-height:1.6;margin-bottom:.4rem;">' + d.text + '</div>' : '') +
-        fileBtn + feedbackSection + '</div>';
-    });
-  } catch(err) {
-    document.getElementById('submissionList').innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패. 다시 시도해주세요.</div>';
-  }
-}
-
-// ── 코치용: 전체 제출물 대시보드에 로드 ──
-async function loadCoachSubmissions() {
-  const listEl = document.getElementById('coach-hw-list');
-  if (!listEl) return;
-  try {
-    const q = window._query(
-      window._collection(window._db, 'homework'),
-      window._orderBy('submittedAt', 'desc')
-    );
-    const snap = await window._getDocs(q);
-    if (snap.empty) {
-      listEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">아직 제출된 과제가 없어요</div>';
-      return;
-    }
-    // 미확인(피드백 없는) 건수
-    let unreviewed = 0;
-    listEl.innerHTML = '';
-    snap.forEach(docSnap => {
-      const d = docSnap.data();
-      if (!d.feedback) unreviewed++;
-      const date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
-      const fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
-      const fbSection = d.feedback
-        ? '<div style="background:var(--sage-light);border-radius:8px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 ' + d.feedback + '</div>'
-        : '<button onclick="openFeedbackForSubmission('' + docSnap.id + '','' + d.studentName + '')" style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;">피드백 작성</button>';
-      listEl.innerHTML += '<div class="hw-card">' +
-        '<div class="hw-top"><div class="hw-class">🎓 ' + d.studentName + '</div>' +
-        '<span class="hw-status ' + (d.feedback ? 'done' : 'pending') + '">' + (d.feedback ? '✓ 피드백 완료' : '미확인') + '</span></div>' +
-        '<div class="hw-title">' + d.hwTitle + '</div>' +
-        (d.text ? '<div style="font-size:.82rem;line-height:1.6;margin:.5rem 0;color:var(--dark);">' + d.text + '</div>' : '') +
-        fileBtn +
-        '<div style="font-size:.72rem;color:var(--gray);margin-bottom:.3rem;">제출일: ' + date + '</div>' +
-        fbSection + '</div>';
-    });
-    // 미확인 숫자 업데이트
-    const statEl = document.querySelector('.cs-num:last-of-type') || document.querySelectorAll('.cs-num')[2];
-    if (statEl) statEl.textContent = unreviewed;
-  } catch(err) { console.error(err); }
-}
-
+// ── 피드백 작성 ──
 function openFeedbackForSubmission(docId, studentName) {
   document.getElementById('modalTitle').textContent = '💌 ' + studentName + '님께 피드백';
   document.getElementById('modalBody').innerHTML =
-    '<div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성하면 학생 앱에 바로 표시돼요</div>' +
-    '<textarea id="fbText" class="m-input" rows="5" placeholder="피드백을 남겨주세요..."></textarea>' +
-    '<button class="m-btn" onclick="saveFeedbackToDoc('' + docId + '','' + studentName + '')">전송하기 →</button>';
+    '<div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성하면 학생 앱에 바로 표시돼요</div>'
+    + '<textarea id="fbText" class="m-input" rows="5" placeholder="피드백을 남겨주세요..."></textarea>'
+    + '<button class="m-btn" onclick="saveFeedbackToDoc('' + docId + '','' + studentName + '')">전송하기 →</button>';
 }
 
 async function saveFeedbackToDoc(docId, studentName) {
-  const text = document.getElementById('fbText').value.trim();
+  var text = document.getElementById('fbText').value.trim();
   if (!text) { showToast('피드백 내용을 입력해주세요'); return; }
   try {
-    const { updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    await updateDoc(doc(window._db, 'homework', docId), {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.updateDoc(mod.doc(window._db, 'homework', docId), {
       feedback: text,
       feedbackAt: window._serverTimestamp(),
       status: 'reviewed'
     });
     closeModal();
     showToast('✅ ' + studentName + '님께 피드백을 전송했어요!');
-    loadCoachSubmissions(); // 목록 새로고침
-  } catch(err) {
-    showToast('전송에 실패했어요. 다시 시도해주세요.');
-  }
+    loadCoachSubmissions();
+  } catch(err) { showToast('전송에 실패했어요. 다시 시도해주세요.'); }
 }
 
 async function submitFeedback(studentName) {
-  const text = document.getElementById('feedbackText').value.trim();
+  var text = document.getElementById('feedbackText').value.trim();
   if (!text) { showToast('피드백 내용을 입력해주세요'); return; }
   try {
     await window._addDoc(window._collection(window._db, 'feedbacks'), {
@@ -1901,51 +1768,114 @@ async function submitFeedback(studentName) {
     });
     closeModal();
     showToast('✅ ' + studentName + '님께 피드백을 전송했어요!');
+  } catch(err) { showToast('전송에 실패했어요. 다시 시도해주세요.'); }
+}
+
+// ── 모달 ──
+function openModal(type, data) {
+  var overlay = document.getElementById('modalOverlay');
+  var title = document.getElementById('modalTitle');
+  var body = document.getElementById('modalBody');
+
+  if (type === 'submit') {
+    title.textContent = '📎 과제 제출';
+    body.innerHTML = '<p style="font-size:0.88rem;font-weight:600;margin-bottom:.3rem;">' + data + '</p>'
+      + '<p style="font-size:0.78rem;color:var(--gray);margin-bottom:1rem;">텍스트로 작성하거나 파일을 첨부해서 제출하세요</p>'
+      + '<textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="5"></textarea>'
+      + '<div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;" onclick="document.getElementById('hwFileInput').click()">'
+      + '<div style="font-size:1.5rem;margin-bottom:.3rem;">📎</div>'
+      + '<div id="fileLabel" style="font-size:.78rem;color:var(--gray);">파일 첨부 — 사진, 음성, PDF (탭하거나 드래그)</div></div>'
+      + '<input type="file" id="hwFileInput" accept="image/*,audio/*,.pdf" style="display:none" onchange="handleFileSelect(this)">'
+      + '<div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;align-items:center;gap:.5rem;"></div>'
+      + '<button class="m-btn" id="hwSubmitBtn" onclick="submitHomework('' + data + '')">제출하기 →</button>';
+
+  } else if (type === 'viewSubmissions') {
+    title.textContent = '📋 ' + data + ' 제출 현황';
+    body.innerHTML = '<div id="submissionList" style="min-height:80px;"><div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div></div>';
+    overlay.classList.add('open');
+    loadSubmissions(data);
+    return;
+
+  } else if (type === 'feedback') {
+    title.textContent = '💌 ' + data + '님께 피드백';
+    body.innerHTML = '<div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">작성한 피드백은 학생 앱에 바로 표시돼요</div>'
+      + '<textarea id="feedbackText" class="m-input" rows="5" placeholder="오늘 수업 피드백을 남겨주세요..."></textarea>'
+      + '<button class="m-btn" onclick="submitFeedback('' + data + '')">피드백 전송하기 →</button>';
+
+  } else if (type === 'enroll') {
+    title.textContent = '수강 신청';
+    body.innerHTML = '<div style="background:var(--cream);border-radius:12px;padding:1rem;margin-bottom:1rem;font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600;">' + data + '</div>'
+      + '<input class="m-input" type="text" placeholder="이름"><input class="m-input" type="text" placeholder="연락처">'
+      + '<select class="m-input"><option>온라인 (Zoom)</option><option>대면</option><option>상관없음</option></select>'
+      + '<textarea class="m-input" rows="2" placeholder="남기실 말씀 (선택)"></textarea>'
+      + '<button class="m-btn" onclick="closeModal();showToast('✅ 신청 완료! 1-2일 내 연락드릴게요 💌')">신청하기</button>';
+
+  } else if (type === 'write') {
+    title.textContent = '✍️ 글 쓰기';
+    body.innerHTML = '<select class="m-input"><option>📖 성경영어</option><option>💬 회화</option><option>🌱 일반</option><option>❓ 질문</option></select>'
+      + '<textarea class="m-input" rows="5" placeholder="오늘의 영어 한마디, 나눔, 질문을 자유롭게 써주세요..."></textarea>'
+      + '<button class="m-btn" onclick="closeModal();showToast('✅ 게시글이 등록되었어요!')">게시하기</button>';
+  }
+  overlay.classList.add('open');
+}
+
+async function loadSubmissions(hwTitle) {
+  try {
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._where('hwTitle', '==', hwTitle),
+      window._orderBy('submittedAt', 'desc')
+    );
+    var snap = await window._getDocs(q);
+    var list = document.getElementById('submissionList');
+    if (snap.empty) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">아직 제출한 학생이 없어요</div>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(docSnap) {
+      var d = docSnap.data();
+      var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
+      var fbSection = d.feedback
+        ? '<div style="background:var(--sage-light);border-radius:8px;padding:.6rem .8rem;margin-top:.5rem;font-size:.78rem;color:#3a6b3e;">💌 ' + d.feedback + '</div>'
+        : '<button onclick="openFeedbackForSubmission('' + docSnap.id + '','' + d.studentName + '')" style="margin-top:.5rem;background:none;border:1.5px solid var(--rose);color:var(--rose);border-radius:100px;padding:.3rem .9rem;font-size:.75rem;cursor:pointer;">피드백 작성</button>';
+      html += '<div style="border:1.5px solid var(--light);border-radius:12px;padding:1rem;margin-bottom:.8rem;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">'
+        + '<span style="font-weight:600;font-size:.9rem;">🎓 ' + d.studentName + '</span>'
+        + '<span style="font-size:.72rem;color:var(--gray);">' + date + '</span></div>'
+        + (d.text ? '<div style="font-size:.82rem;color:var(--dark);line-height:1.6;margin-bottom:.4rem;">' + d.text + '</div>' : '')
+        + fileBtn + fbSection + '</div>';
+    });
+    list.innerHTML = html;
   } catch(err) {
-    showToast('전송에 실패했어요. 다시 시도해주세요.');
+    document.getElementById('submissionList').innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패.</div>';
   }
 }
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
 }
-
 function closeModalOutside(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 }
 
-// 알림 설정 모달
 function openNotificationSettings() {
-  const overlay = document.getElementById('modalOverlay');
-  const title = document.getElementById('modalTitle');
-  const body = document.getElementById('modalBody');
-  title.textContent = '🔔 알림 설정';
-  body.innerHTML = `
-    <div style="display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.2rem;">
-      <label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">
-        수업 시작 30분 전 알림
-        <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);">
-      </label>
-      <label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">
-        숙제 마감 알림
-        <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);">
-      </label>
-      <label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">
-        코치 피드백 알림
-        <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);">
-      </label>
-      <label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">
-        커뮤니티 새 글 알림
-        <input type="checkbox" style="width:18px;height:18px;accent-color:var(--rose);">
-      </label>
-    </div>
-    <button class="m-btn" onclick="closeModal(); showToast('✅ 알림 설정이 저장되었어요!')">저장하기</button>`;
+  var overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = '🔔 알림 설정';
+  document.getElementById('modalBody').innerHTML =
+    '<div style="display:flex;flex-direction:column;gap:.8rem;margin-bottom:1.2rem;">'
+    + '<label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">수업 시작 30분 전 알림<input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);"></label>'
+    + '<label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">숙제 마감 알림<input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);"></label>'
+    + '<label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">코치 피드백 알림<input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--rose);"></label>'
+    + '<label style="display:flex;justify-content:space-between;align-items:center;font-size:.88rem;">커뮤니티 새 글 알림<input type="checkbox" style="width:18px;height:18px;accent-color:var(--rose);"></label>'
+    + '</div>'
+    + '<button class="m-btn" onclick="closeModal();showToast('✅ 알림 설정이 저장되었어요!')">저장하기</button>';
   overlay.classList.add('open');
 }
 
-// 줌 링크 열기 (코치님이 실제 링크로 교체하세요)
 function openZoom() {
-  const zoomUrl = 'https://zoom.us/j/'; // ← 코치님 줌 링크로 교체
+  var zoomUrl = 'https://zoom.us/j/';
   if (zoomUrl === 'https://zoom.us/j/') {
     showToast('⚠️ 코치님이 줌 링크를 아직 등록하지 않으셨어요');
   } else {
@@ -1953,13 +1883,13 @@ function openZoom() {
   }
 }
 
-let toastTimer;
+var toastTimer;
 function showToast(msg) {
-  const t = document.getElementById('toast');
+  var t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2500);
 }
 </script>
 </body>
