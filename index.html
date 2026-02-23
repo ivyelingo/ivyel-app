@@ -786,6 +786,7 @@ textarea.m-input { min-height: 100px; resize: none; }
     const db = getFirestore(app);
 
     // ── 전역 함수로 노출 (HTML onclick에서 사용) ──
+    window._app = app;  // Storage 초기화에 필요
     window._auth = auth;
     window._db = db;
     window._createUser = createUserWithEmailAndPassword;
@@ -1644,59 +1645,25 @@ async function loadMySubmissions() {
 }
 
 // ── 과제 실제 제출 (Firebase 저장) ──
-var _selectedFile = null;
-function handleFileSelect(input) {
-  if (!input.files[0]) return;
-  _selectedFile = input.files[0];
-  var icon = _selectedFile.type.startsWith('image') ? '🖼️' : _selectedFile.type.startsWith('audio') ? '🎵' : '📄';
-  var preview = document.getElementById('filePreview');
-  if (preview) {
-    preview.style.display = 'flex';
-    preview.innerHTML = icon + ' <span style="flex:1;">' + _selectedFile.name + '</span>'
-      + '<span style="color:var(--gray);font-size:.75rem;">' + (_selectedFile.size/1024).toFixed(0) + 'KB</span>'
-      + '<span onclick="removeSelectedFile()" style="cursor:pointer;color:var(--rose);font-weight:600;margin-left:.5rem;">✕</span>';
-  }
-  var lbl = document.getElementById('fileLabel');
-  if (lbl) lbl.textContent = '파일 선택됨 ✓';
-}
-function removeSelectedFile() {
-  _selectedFile = null;
-  var preview = document.getElementById('filePreview');
-  if (preview) preview.style.display = 'none';
-  var lbl = document.getElementById('fileLabel');
-  if (lbl) lbl.textContent = '파일 첨부 (사진, 음성, PDF)';
-  var fi = document.getElementById('hwFileInput');
-  if (fi) fi.value = '';
-}
 async function submitHomework(hwTitle) {
   var text = (document.getElementById('hwText') || {}).value || '';
   text = text.trim();
-  if (!text && !_selectedFile) { showToast('내용을 입력하거나 파일을 첨부해주세요'); return; }
+  if (!text) { showToast('과제 내용을 입력해주세요'); return; }
   var btn = document.getElementById('hwSubmitBtn');
   if (btn) { btn.textContent = '제출 중...'; btn.disabled = true; }
   try {
     var user = window._currentUser;
-    var fileUrl = null, fileName = null;
-    if (_selectedFile) {
-      var sm = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
-      var storage = sm.getStorage();
-      var fileRef = sm.ref(storage, 'homework/' + user.uid + '/' + Date.now() + '_' + _selectedFile.name);
-      await sm.uploadBytes(fileRef, _selectedFile);
-      fileUrl = await sm.getDownloadURL(fileRef);
-      fileName = _selectedFile.name;
-    }
     await window._addDoc(window._collection(window._db, 'homework'), {
       studentUid: user.uid,
       studentName: user.name,
       hwTitle: hwTitle,
       text: text,
-      fileUrl: fileUrl,
-      fileName: fileName,
+      fileUrl: null,
+      fileName: null,
       status: 'submitted',
       feedback: null,
       submittedAt: window._serverTimestamp()
     });
-    _selectedFile = null;
     closeModal();
     showToast('✅ 제출 완료! 제출 완료 탭에서 확인하세요 💌');
 
@@ -1711,13 +1678,12 @@ async function submitHomework(hwTitle) {
         if (submitBtn) { submitBtn.className = 'hw-submit-btn done-btn'; submitBtn.textContent = '✓ 제출 완료'; submitBtn.onclick = null; }
       }
     });
-    // 배지 업데이트
     var remaining = document.querySelectorAll('.hw-card[data-hw="pending"]').length;
-    var pendingBadge = document.querySelector('.hw-tab .badge');
+    var pendingBadge = document.getElementById('pendingBadge');
     if (pendingBadge) pendingBadge.textContent = remaining;
   } catch(err) {
+    console.error('제출 에러:', err);
     showToast('제출에 실패했어요. 다시 시도해주세요.');
-    console.error(err);
     if (btn) { btn.textContent = '제출하기 →'; btn.disabled = false; }
   }
 }
@@ -1729,13 +1695,7 @@ function openSubmitModal(hwTitle) {
   title.textContent = '📎 과제 제출';
   body.innerHTML = `
     <p style="font-size:.88rem;font-weight:600;margin-bottom:.8rem;">${hwTitle}</p>
-    <textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="5"></textarea>
-    <div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;" onclick="document.getElementById('hwFileInput').click()">
-      <div style="font-size:1.5rem;margin-bottom:.3rem;">📎</div>
-      <div id="fileLabel" style="font-size:.78rem;color:var(--gray);">파일 첨부 — 사진, 음성, PDF</div>
-    </div>
-    <input type="file" id="hwFileInput" accept="image/*,audio/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
-    <div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;align-items:center;gap:.5rem;"></div>
+    <textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="6"></textarea>
     <button class="m-btn" id="hwSubmitBtn" onclick="submitHomework('${hwTitle}')">제출하기 →</button>`;
   overlay.classList.add('open');
 }
