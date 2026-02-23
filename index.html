@@ -1259,6 +1259,14 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div id="coach-hw-list">
         <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
+
+      <!-- API 키 설정 -->
+      <div style="margin-top:1.2rem;padding:1rem;background:var(--warm);border:1.5px solid var(--light);border-radius:14px;">
+        <div style="font-size:.75rem;color:var(--gray);margin-bottom:.6rem;">⚙️ AI 피드백 설정</div>
+        <button onclick="manageApiKey()" style="width:100%;background:none;border:1.5px solid var(--light);border-radius:100px;padding:.6rem;font-size:.78rem;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--charcoal);" id="apiKeyStatusBtn">
+          🔑 API 키 확인 중...
+        </button>
+      </div>
     </div>
 
     <!-- PROFILE -->
@@ -1484,10 +1492,11 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     setTimeout(loadCoachSubmissions, 500);
+    setTimeout(updateApiKeyStatus, 600);
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
@@ -1801,6 +1810,36 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ── API 키 관리 ──
+function manageApiKey() {
+  var existing = localStorage.getItem('ivyel_anthropic_key');
+  var msg = existing
+    ? 'API 키가 저장되어 있어요.\n변경하려면 새 키를 입력하고, 삭제하려면 취소 후 삭제 버튼을 누르세요.\n\n새 API 키 (변경 시 입력):'
+    : 'Anthropic API 키를 입력하세요.\n(https://console.anthropic.com 에서 발급)\n\nAPI 키:';
+  var newKey = prompt(msg, existing ? '****기존키유지****' : '');
+  if (newKey === null) return; // 취소
+  if (newKey === '****기존키유지****') return; // 변경 안 함
+  if (!newKey.trim()) {
+    // 빈 값 입력 → 삭제
+    localStorage.removeItem('ivyel_anthropic_key');
+    updateApiKeyStatus();
+    showToast('API 키가 삭제됐어요');
+    return;
+  }
+  localStorage.setItem('ivyel_anthropic_key', newKey.trim());
+  updateApiKeyStatus();
+  showToast('✅ API 키가 저장됐어요!');
+}
+
+function updateApiKeyStatus() {
+  var btn = document.getElementById('apiKeyStatusBtn');
+  if (!btn) return;
+  var key = localStorage.getItem('ivyel_anthropic_key');
+  btn.textContent = key ? '🔑 API 키 등록됨 · 변경하기' : '🔑 API 키 등록하기 (AI 피드백 필요)';
+  btn.style.borderColor = key ? 'var(--sage)' : 'var(--rose)';
+  btn.style.color = key ? 'var(--sage)' : 'var(--rose)';
+}
+
 // ── 코치: 전체 제출 목록 로드 ──
 async function loadCoachSubmissions() {
   var listEl = document.getElementById('coach-hw-list');
@@ -1896,13 +1935,28 @@ function openAiFeedbackModal(docId, studentName, hwText, hwTitle) {
 async function generateAiFeedback(docId, studentName, hwText, hwTitle) {
   var btn = document.getElementById('aiGenerateBtn');
   var resultEl = document.getElementById('aiFeedbackResult');
+
+  // API 키 확인
+  var apiKey = localStorage.getItem('ivyel_anthropic_key') || '';
+  if (!apiKey) {
+    var inputKey = prompt('Anthropic API 키를 입력하세요.\n(한 번 저장하면 다음부터 자동 입력돼요)');
+    if (!inputKey || !inputKey.trim()) { showToast('API 키가 없으면 AI 피드백을 사용할 수 없어요'); return; }
+    apiKey = inputKey.trim();
+    localStorage.setItem('ivyel_anthropic_key', apiKey);
+  }
+
   btn.textContent = '생성 중...✨'; btn.disabled = true;
   resultEl.style.display = 'none';
 
   try {
     var response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1200,
@@ -1910,7 +1964,7 @@ async function generateAiFeedback(docId, studentName, hwText, hwTitle) {
 학생의 영어 과제를 검토하고 피드백을 두 파트로 나눠 JSON 형식으로만 반환하세요.
 다른 텍스트 없이 반드시 아래 JSON 형식만 반환하세요:
 {
-  "student": "학생에게 전달할 내용 (문법 교정 + 더 자연스러운 표현 제안만 포함. 한국어 설명 + 영어 예문 형식)",
+  "student": "학생에게 전달할 내용 (문법 교정 + 더 자연스러운 표현 제안만 포함. 한국어 설명 + 영어 예문 형식으로 작성)",
   "coach": "코치만 보는 내용 (칭찬&격려 포인트 + 다음 학습 방향 제안. 한국어로 간결하게)"
 }
 student 파트: 친근하고 따뜻한 톤. 틀린 부분은 구체적 수정 예문 포함. 자신감을 줄 것.
@@ -1921,6 +1975,14 @@ coach 파트: 이 학생의 강점과 집중 보완 포인트, 다음 수업에�
         }]
       })
     });
+
+    // API 키 오류 처리
+    if (response.status === 401) {
+      localStorage.removeItem('ivyel_anthropic_key');
+      showToast('API 키가 올바르지 않아요. 다시 시도하면 재입력할 수 있어요.');
+      btn.textContent = '✨ AI 피드백 생성하기'; btn.disabled = false;
+      return;
+    }
 
     var data = await response.json();
     if (data.error) throw new Error(data.error.message);
