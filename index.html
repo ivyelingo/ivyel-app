@@ -1834,10 +1834,17 @@ function manageApiKey() {
 function updateApiKeyStatus() {
   var btn = document.getElementById('apiKeyStatusBtn');
   if (!btn) return;
-  var key = localStorage.getItem('ivyel_anthropic_key');
-  btn.textContent = key ? '🔑 API 키 등록됨 · 변경하기' : '🔑 API 키 등록하기 (AI 피드백 필요)';
-  btn.style.borderColor = key ? 'var(--sage)' : 'var(--rose)';
-  btn.style.color = key ? 'var(--sage)' : 'var(--rose)';
+  var key = localStorage.getItem('ivyel_anthropic_key') || '';
+  if (key) {
+    var masked = key.substring(0, 14) + '••••' + key.slice(-4);
+    btn.textContent = '🔑 등록됨: ' + masked + '  · 변경';
+    btn.style.borderColor = 'var(--sage)';
+    btn.style.color = 'var(--sage)';
+  } else {
+    btn.textContent = '🔑 API 키 등록하기 (AI 피드백 사용 필요)';
+    btn.style.borderColor = 'var(--rose)';
+    btn.style.color = 'var(--rose)';
+  }
 }
 
 // ── 코치: 전체 제출 목록 로드 ──
@@ -1922,6 +1929,7 @@ function openAiFeedbackModal(docId, studentName, hwText, hwTitle) {
       <div id="feedbackForCoach" style="background:linear-gradient(135deg,var(--cream),var(--rose-light));border:1.5px solid var(--rose-light);border-radius:12px;padding:1rem;font-size:.83rem;line-height:1.8;color:var(--charcoal);white-space:pre-wrap;"></div>
     </div>
 
+    <div id="aiFeedbackError" style="display:none;background:#fff0f0;border:1.5px solid var(--rose-light);border-radius:12px;padding:.8rem 1rem;margin-bottom:.8rem;font-size:.78rem;color:var(--rose);white-space:pre-wrap;word-break:break-all;"></div>
     <button class="m-btn" id="aiGenerateBtn" onclick="generateAiFeedback('${docId}','${studentName}',\`${hwText.replace(/`/g,"'")}\`,'${hwTitle}')">
       ✨ AI 피드백 생성하기
     </button>
@@ -1935,14 +1943,18 @@ function openAiFeedbackModal(docId, studentName, hwText, hwTitle) {
 async function generateAiFeedback(docId, studentName, hwText, hwTitle) {
   var btn = document.getElementById('aiGenerateBtn');
   var resultEl = document.getElementById('aiFeedbackResult');
+  var errorEl = document.getElementById('aiFeedbackError');
+
+  if (errorEl) errorEl.style.display = 'none';
 
   // API 키 확인
   var apiKey = localStorage.getItem('ivyel_anthropic_key') || '';
   if (!apiKey) {
-    var inputKey = prompt('Anthropic API 키를 입력하세요.\n(한 번 저장하면 다음부터 자동 입력돼요)');
-    if (!inputKey || !inputKey.trim()) { showToast('API 키가 없으면 AI 피드백을 사용할 수 없어요'); return; }
+    var inputKey = prompt('Anthropic API 키를 입력하세요.\n(https://console.anthropic.com → API Keys → Create Key\nsk-ant-... 로 시작하는 키)');
+    if (!inputKey || !inputKey.trim()) { showToast('API 키를 먼저 등록해주세요'); return; }
     apiKey = inputKey.trim();
     localStorage.setItem('ivyel_anthropic_key', apiKey);
+    updateApiKeyStatus();
   }
 
   btn.textContent = '생성 중...✨'; btn.disabled = true;
@@ -1958,37 +1970,40 @@ async function generateAiFeedback(docId, studentName, hwText, hwTitle) {
         'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1200,
-        system: `당신은 IVY·EL Elingo 영어 학습 코치의 AI 어시스턴트입니다.
-학생의 영어 과제를 검토하고 피드백을 두 파트로 나눠 JSON 형식으로만 반환하세요.
-다른 텍스트 없이 반드시 아래 JSON 형식만 반환하세요:
-{
-  "student": "학생에게 전달할 내용 (문법 교정 + 더 자연스러운 표현 제안만 포함. 한국어 설명 + 영어 예문 형식으로 작성)",
-  "coach": "코치만 보는 내용 (칭찬&격려 포인트 + 다음 학습 방향 제안. 한국어로 간결하게)"
-}
-student 파트: 친근하고 따뜻한 톤. 틀린 부분은 구체적 수정 예문 포함. 자신감을 줄 것.
-coach 파트: 이 학생의 강점과 집중 보완 포인트, 다음 수업에서 활용할 방향 제안.`,
-        messages: [{
-          role: 'user',
-          content: `학생: ${studentName} / 과제: ${hwTitle}\n\n제출 내용:\n${hwText}`
-        }]
+        system: '당신은 IVY·EL Elingo 영어 학습 코치의 AI 어시스턴트입니다. 학생의 영어 과제를 검토하고 피드백을 JSON으로만 반환하세요. 반드시 {"student":"...","coach":"..."} 형식만 반환하고 다른 텍스트는 절대 쓰지 마세요. student: 문법교정+자연스러운표현제안, 한국어설명+영어예문, 따뜻한 톤. coach: 칭찬포인트+다음학습방향, 한국어로 간결하게.',
+        messages: [{ role: 'user', content: '학생: ' + studentName + ' / 과제: ' + hwTitle + '\n\n' + hwText }]
       })
     });
 
-    // API 키 오류 처리
+    // 상태 코드별 에러 처리
     if (response.status === 401) {
       localStorage.removeItem('ivyel_anthropic_key');
-      showToast('API 키가 올바르지 않아요. 다시 시도하면 재입력할 수 있어요.');
+      updateApiKeyStatus();
+      showError(errorEl, '❌ API 키가 올바르지 않아요.\n하단 [API 키 등록하기]에서 다시 등록해주세요.');
+      btn.textContent = '✨ AI 피드백 생성하기'; btn.disabled = false;
+      return;
+    }
+    if (response.status === 429) {
+      showError(errorEl, '⏳ 요청이 너무 많아요. 잠시 후 다시 시도해주세요.');
+      btn.textContent = '✨ AI 피드백 생성하기'; btn.disabled = false;
+      return;
+    }
+    if (!response.ok) {
+      var errJson = await response.json().catch(function(){ return {}; });
+      var errMsg = (errJson.error && errJson.error.message) ? errJson.error.message : ('HTTP ' + response.status);
+      showError(errorEl, '❌ API 오류: ' + errMsg);
       btn.textContent = '✨ AI 피드백 생성하기'; btn.disabled = false;
       return;
     }
 
     var data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-
     var raw = data.content[0].text.trim();
-    // JSON 파싱
+
+    // 백틱 코드블록 제거
+    raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();
+
     var parsed;
     try {
       parsed = JSON.parse(raw);
@@ -2000,19 +2015,30 @@ coach 파트: 이 학생의 강점과 집중 보완 포인트, 다음 수업에�
     document.getElementById('feedbackForStudent').textContent = parsed.student || '';
     document.getElementById('feedbackForCoach').textContent = parsed.coach || '';
     resultEl.style.display = 'block';
-    // 데이터 저장
     resultEl.dataset.student = parsed.student || '';
     resultEl.dataset.coach = parsed.coach || '';
 
     btn.textContent = '🔄 다시 생성';
     btn.disabled = false;
     document.getElementById('aiSendBtn').style.display = 'block';
+
   } catch(err) {
-    console.error(err);
-    showToast('AI 피드백 생성에 실패했어요. 다시 시도해주세요.');
+    console.error('AI 피드백 에러:', err);
+    var msg = err.message || String(err);
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.toLowerCase().includes('cors')) {
+      showError(errorEl, '🌐 네트워크 오류가 발생했어요.\n가능한 원인:\n1. 인터넷 연결 확인\n2. CORS 차단 (브라우저 콘솔 F12에서 확인)\n\n에러: ' + msg);
+    } else {
+      showError(errorEl, '❌ 오류: ' + msg);
+    }
     btn.textContent = '✨ AI 피드백 생성하기';
     btn.disabled = false;
   }
+}
+
+function showError(el, msg) {
+  if (!el) { alert(msg); return; }
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
 // ── AI 피드백 Firestore에 저장 (학생용/코치용 분리) ──
