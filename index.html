@@ -815,8 +815,27 @@ textarea.m-input { min-height: 100px; resize: none; }
       } else {
         // 로그아웃 상태
         window._currentUser = null;
+        if (typeof _mySubUnsub === 'function') { _mySubUnsub(); _mySubUnsub = null; }
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('app').classList.remove('show');
+        // 숙제 탭/섹션 초기화
+        var _ps = document.getElementById('hw-pending-section');
+        var _ds = document.getElementById('hw-done-section');
+        if (_ps) _ps.style.display = 'block';
+        if (_ds) _ds.style.display = 'none';
+        document.querySelectorAll('.hw-tab').forEach(function(t, i) {
+          t.classList.toggle('active', i === 0);
+        });
+        // 미제출 카드 상태 복원
+        document.querySelectorAll('.hw-card[data-hw]').forEach(function(card) {
+          var submitBtn = card.querySelector('.hw-submit-btn');
+          if (submitBtn && submitBtn.classList.contains('done-btn')) {
+            // 초기 상태로 되돌리지 않음 (하드코딩 카드라 새로고침 시 원상복구)
+          }
+        });
+        // 코치 탭 제거
+        var _cn = document.getElementById('coachNavBtn');
+        if (_cn) _cn.remove();
       }
     });
   </script>
@@ -1074,42 +1093,39 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-sub">Homework &amp; Assignments</div>
 
       <div class="hw-tabs">
-        <button class="hw-tab active" onclick="hwTab('pending', this)">미제출 <span class="badge">2</span></button>
-        <button class="hw-tab" onclick="hwTab('done', this)">제출 완료</button>
+        <button class="hw-tab active" onclick="hwTab('pending', this)">미제출 <span class="badge" id="pendingBadge">2</span></button>
+        <button class="hw-tab" data-tab="done" onclick="hwTab('done', this)">제출 완료 <span class="badge" id="doneBadge" style="display:none;background:var(--sage);">0</span></button>
         <button class="hw-tab" onclick="hwTab('all', this)">전체</button>
       </div>
 
-      <div class="hw-card" data-hw="pending">
-        <div class="hw-top">
-          <div class="hw-class">📖 성경영어</div>
-          <span class="hw-status pending">미제출</span>
+      <!-- 미제출 과제 -->
+      <div id="hw-pending-section">
+        <div class="hw-card" data-hw="pending">
+          <div class="hw-top">
+            <div class="hw-class">📖 성경영어</div>
+            <span class="hw-status pending">미제출</span>
+          </div>
+          <div class="hw-title">John 3장 영어로 필사하기</div>
+          <div class="hw-desc">요한복음 3장을 영어 성경으로 읽고, 마음에 닿는 구절 3개를 영어로 필사해주세요.</div>
+          <div class="hw-due">마감 <span>내일 오전 9:00</span></div>
+          <button class="hw-submit-btn" onclick="openSubmitModal('John 3장 필사')">📎 제출하기</button>
         </div>
-        <div class="hw-title">John 3장 영어로 필사하기</div>
-        <div class="hw-desc">요한복음 3장을 영어 성경으로 읽고, 마음에 닿는 구절 3개를 영어로 필사해주세요.</div>
-        <div class="hw-due">마감 <span>내일 오전 9:00</span></div>
-        <button class="hw-submit-btn" onclick="openModal('submit', 'John 3장 필사')">📎 제출하기</button>
+
+        <div class="hw-card" data-hw="pending">
+          <div class="hw-top">
+            <div class="hw-class">💬 영어 회화</div>
+            <span class="hw-status pending">미제출</span>
+          </div>
+          <div class="hw-title">자기소개 영어로 녹음하기</div>
+          <div class="hw-desc">1분 분량의 자기소개를 영어로 녹음해서 제출해주세요. 틀려도 괜찮아요!</div>
+          <div class="hw-due">마감 <span>이번 주 금요일</span></div>
+          <button class="hw-submit-btn" onclick="openSubmitModal('자기소개 녹음')">🎤 제출하기</button>
+        </div>
       </div>
 
-      <div class="hw-card" data-hw="pending">
-        <div class="hw-top">
-          <div class="hw-class">💬 영어 회화</div>
-          <span class="hw-status pending">미제출</span>
-        </div>
-        <div class="hw-title">자기소개 영어로 녹음하기</div>
-        <div class="hw-desc">1분 분량의 자기소개를 영어로 녹음해서 제출해주세요. 틀려도 괜찮아요!</div>
-        <div class="hw-due">마감 <span>이번 주 금요일</span></div>
-        <button class="hw-submit-btn" onclick="openModal('submit', '자기소개 녹음')">🎤 제출하기</button>
-      </div>
-
-      <div class="hw-card" data-hw="done">
-        <div class="hw-top">
-          <div class="hw-class">📖 성경영어</div>
-          <span class="hw-status done">✓ 완료</span>
-        </div>
-        <div class="hw-title">Psalm 23 암송 & 필사</div>
-        <div class="hw-desc">시편 23편을 영어로 암송하고 필사하는 과제.</div>
-        <div class="hw-due" style="color:var(--sage);">✓ 지난주 제출 완료</div>
-        <button class="hw-submit-btn done-btn">✓ 코치 확인 완료</button>
+      <!-- 제출 완료 목록 (Firebase에서 로드) -->
+      <div id="hw-done-section" style="display:none;">
+        <div id="hw-done-list" style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
     </div>
 
@@ -1475,11 +1491,56 @@ function showAppAfterLogin(userData) {
       coachNav.onclick = function() { switchPage('coach', this); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
+  } else {
+    // 학생: 이미 제출한 과제는 완료 상태로 표시
+    setTimeout(restoreSubmittedStatus, 500);
   }
+}
+
+// ── 로그인 후 이미 제출한 과제 상태 복원 ──
+async function restoreSubmittedStatus() {
+  try {
+    var user = window._currentUser;
+    if (!user) return;
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._where('studentUid', '==', user.uid)
+    );
+    var snap = await window._getDocs(q);
+    var submittedTitles = [];
+    snap.forEach(function(ds) { submittedTitles.push(ds.data().hwTitle); });
+
+    // 제출된 과제 카드 버튼 업데이트
+    document.querySelectorAll('.hw-card[data-hw="pending"]').forEach(function(card) {
+      var titleEl = card.querySelector('.hw-title');
+      if (!titleEl) return;
+      var matched = submittedTitles.find(function(t) {
+        return titleEl.textContent.includes(t.replace(' 필사','').replace(' 녹음',''));
+      });
+      if (matched) {
+        card.dataset.hw = 'done';
+        var statusEl = card.querySelector('.hw-status');
+        if (statusEl) { statusEl.className = 'hw-status done'; statusEl.textContent = '✓ 제출 완료'; }
+        var btn = card.querySelector('.hw-submit-btn');
+        if (btn) { btn.className = 'hw-submit-btn done-btn'; btn.textContent = '✓ 제출 완료'; btn.onclick = null; }
+      }
+    });
+
+    // 배지 업데이트
+    var remaining = document.querySelectorAll('.hw-card[data-hw="pending"]').length;
+    var pendingBadge = document.getElementById('pendingBadge');
+    var doneBadge = document.getElementById('doneBadge');
+    if (pendingBadge) pendingBadge.textContent = remaining;
+    if (doneBadge && submittedTitles.length > 0) {
+      doneBadge.textContent = submittedTitles.length;
+      doneBadge.style.display = 'inline';
+    }
+  } catch(err) { console.error(err); }
 }
 
 // ── Firebase 로그아웃 ──
 async function doLogout() {
+  if (typeof _mySubUnsub === 'function') { _mySubUnsub(); _mySubUnsub = null; }
   await window._signOut(window._auth);
   // onAuthStateChanged가 자동으로 로그인 화면으로 전환
 }
@@ -1503,10 +1564,174 @@ function cfFilter(type, el) {
 function hwTab(type, el) {
   document.querySelectorAll('.hw-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.querySelectorAll('.hw-card').forEach(c => {
-    if (type === 'all') c.style.display = 'block';
-    else c.style.display = c.dataset.hw === type ? 'block' : 'none';
-  });
+
+  var pendingSection = document.getElementById('hw-pending-section');
+  var doneSection = document.getElementById('hw-done-section');
+
+  if (type === 'pending') {
+    if (pendingSection) pendingSection.style.display = 'block';
+    if (doneSection) doneSection.style.display = 'none';
+  } else if (type === 'done') {
+    if (pendingSection) pendingSection.style.display = 'none';
+    if (doneSection) doneSection.style.display = 'block';
+    loadMySubmissions();
+  } else {
+    // 전체
+    if (pendingSection) pendingSection.style.display = 'block';
+    if (doneSection) doneSection.style.display = 'block';
+    loadMySubmissions();
+  }
+}
+
+// ── 내 제출 완료 목록 (Firebase, 실시간) ──
+var _mySubUnsub = null;
+async function loadMySubmissions() {
+  var listEl = document.getElementById('hw-done-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  if (_mySubUnsub) { _mySubUnsub(); _mySubUnsub = null; }
+  try {
+    var user = window._currentUser;
+    if (!user) return;
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var q = mod.query(
+      mod.collection(window._db, 'homework'),
+      mod.where('studentUid', '==', user.uid),
+      mod.orderBy('submittedAt', 'desc')
+    );
+    _mySubUnsub = mod.onSnapshot(q, function(snap) {
+      // 배지 업데이트
+      var doneTab = document.querySelector('.hw-tab[data-tab="done"]');
+      var doneBadge = document.getElementById('doneBadge');
+      if (snap.empty) {
+        listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">아직 제출한 과제가 없어요</div>';
+        if (doneBadge) doneBadge.style.display = 'none';
+        return;
+      }
+      var html = ''; var count = 0;
+      snap.forEach(function(ds) {
+        count++;
+        var d = ds.data();
+        var date = d.submittedAt ? new Date(d.submittedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+        var fileBtn = d.fileUrl ? '<a href="' + d.fileUrl + '" target="_blank" style="font-size:.75rem;color:var(--rose);text-decoration:none;display:block;margin:.3rem 0;">📎 ' + d.fileName + '</a>' : '';
+        var fbBox = d.feedback
+          ? '<div style="background:var(--sage-light);border-radius:10px;padding:.7rem 1rem;margin-top:.6rem;font-size:.82rem;color:#3a6b3e;">💌 <b>코치 피드백:</b><br>' + d.feedback + '</div>'
+          : '<div style="background:var(--gold-light);border-radius:10px;padding:.6rem 1rem;margin-top:.6rem;font-size:.78rem;color:#8a6a30;">⏳ 코치님이 확인 중이에요</div>';
+        html += '<div class="hw-card">'
+          + '<div class="hw-top"><div class="hw-class">✓ ' + d.hwTitle + '</div>'
+          + '<span class="hw-status done">' + (d.status === 'reviewed' ? '✓ 피드백 완료' : '✓ 제출 완료') + '</span></div>'
+          + (d.text ? '<div style="font-size:.84rem;line-height:1.7;margin:.5rem 0;">' + d.text + '</div>' : '')
+          + fileBtn
+          + '<div style="font-size:.72rem;color:var(--gray);">제출일: ' + date + '</div>'
+          + fbBox + '</div>';
+      });
+      listEl.innerHTML = html;
+      if (doneBadge) { doneBadge.textContent = count; doneBadge.style.display = 'inline'; }
+    }, function(err) {
+      listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+      console.error(err);
+    });
+  } catch(err) {
+    listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+// ── 과제 실제 제출 (Firebase 저장) ──
+var _selectedFile = null;
+function handleFileSelect(input) {
+  if (!input.files[0]) return;
+  _selectedFile = input.files[0];
+  var icon = _selectedFile.type.startsWith('image') ? '🖼️' : _selectedFile.type.startsWith('audio') ? '🎵' : '📄';
+  var preview = document.getElementById('filePreview');
+  if (preview) {
+    preview.style.display = 'flex';
+    preview.innerHTML = icon + ' <span style="flex:1;">' + _selectedFile.name + '</span>'
+      + '<span style="color:var(--gray);font-size:.75rem;">' + (_selectedFile.size/1024).toFixed(0) + 'KB</span>'
+      + '<span onclick="removeSelectedFile()" style="cursor:pointer;color:var(--rose);font-weight:600;margin-left:.5rem;">✕</span>';
+  }
+  var lbl = document.getElementById('fileLabel');
+  if (lbl) lbl.textContent = '파일 선택됨 ✓';
+}
+function removeSelectedFile() {
+  _selectedFile = null;
+  var preview = document.getElementById('filePreview');
+  if (preview) preview.style.display = 'none';
+  var lbl = document.getElementById('fileLabel');
+  if (lbl) lbl.textContent = '파일 첨부 (사진, 음성, PDF)';
+  var fi = document.getElementById('hwFileInput');
+  if (fi) fi.value = '';
+}
+async function submitHomework(hwTitle) {
+  var text = (document.getElementById('hwText') || {}).value || '';
+  text = text.trim();
+  if (!text && !_selectedFile) { showToast('내용을 입력하거나 파일을 첨부해주세요'); return; }
+  var btn = document.getElementById('hwSubmitBtn');
+  if (btn) { btn.textContent = '제출 중...'; btn.disabled = true; }
+  try {
+    var user = window._currentUser;
+    var fileUrl = null, fileName = null;
+    if (_selectedFile) {
+      var sm = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
+      var storage = sm.getStorage();
+      var fileRef = sm.ref(storage, 'homework/' + user.uid + '/' + Date.now() + '_' + _selectedFile.name);
+      await sm.uploadBytes(fileRef, _selectedFile);
+      fileUrl = await sm.getDownloadURL(fileRef);
+      fileName = _selectedFile.name;
+    }
+    await window._addDoc(window._collection(window._db, 'homework'), {
+      studentUid: user.uid,
+      studentName: user.name,
+      hwTitle: hwTitle,
+      text: text,
+      fileUrl: fileUrl,
+      fileName: fileName,
+      status: 'submitted',
+      feedback: null,
+      submittedAt: window._serverTimestamp()
+    });
+    _selectedFile = null;
+    closeModal();
+    showToast('✅ 제출 완료! 제출 완료 탭에서 확인하세요 💌');
+
+    // 해당 카드를 제출 완료 상태로 업데이트
+    document.querySelectorAll('.hw-card[data-hw="pending"]').forEach(function(card) {
+      var titleEl = card.querySelector('.hw-title');
+      if (titleEl && titleEl.textContent.includes(hwTitle.replace(' 필사','').replace(' 녹음',''))) {
+        card.dataset.hw = 'done';
+        var statusEl = card.querySelector('.hw-status');
+        if (statusEl) { statusEl.className = 'hw-status done'; statusEl.textContent = '✓ 제출 완료'; }
+        var submitBtn = card.querySelector('.hw-submit-btn');
+        if (submitBtn) { submitBtn.className = 'hw-submit-btn done-btn'; submitBtn.textContent = '✓ 제출 완료'; submitBtn.onclick = null; }
+      }
+    });
+    // 배지 업데이트
+    var remaining = document.querySelectorAll('.hw-card[data-hw="pending"]').length;
+    var pendingBadge = document.querySelector('.hw-tab .badge');
+    if (pendingBadge) pendingBadge.textContent = remaining;
+  } catch(err) {
+    showToast('제출에 실패했어요. 다시 시도해주세요.');
+    console.error(err);
+    if (btn) { btn.textContent = '제출하기 →'; btn.disabled = false; }
+  }
+}
+
+function openSubmitModal(hwTitle) {
+  const overlay = document.getElementById('modalOverlay');
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+  title.textContent = '📎 과제 제출';
+  body.innerHTML = `
+    <p style="font-size:.88rem;font-weight:600;margin-bottom:.8rem;">${hwTitle}</p>
+    <textarea id="hwText" class="m-input" placeholder="과제 내용을 여기에 써주세요..." rows="5"></textarea>
+    <div id="fileDropZone" style="border:2px dashed var(--light);border-radius:12px;padding:1.4rem;text-align:center;margin-bottom:.8rem;cursor:pointer;" onclick="document.getElementById('hwFileInput').click()">
+      <div style="font-size:1.5rem;margin-bottom:.3rem;">📎</div>
+      <div id="fileLabel" style="font-size:.78rem;color:var(--gray);">파일 첨부 — 사진, 음성, PDF</div>
+    </div>
+    <input type="file" id="hwFileInput" accept="image/*,audio/*,.pdf" style="display:none" onchange="handleFileSelect(this)">
+    <div id="filePreview" style="display:none;background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:.8rem;font-size:.8rem;align-items:center;gap:.5rem;"></div>
+    <button class="m-btn" id="hwSubmitBtn" onclick="submitHomework('${hwTitle}')">제출하기 →</button>`;
+  overlay.classList.add('open');
 }
 
 function openModal(type, data) {
