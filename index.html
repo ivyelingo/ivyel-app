@@ -818,6 +818,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         window._currentUser = null;
         if (typeof _mySubUnsub === 'function') { _mySubUnsub(); _mySubUnsub = null; }
         if (typeof _communityUnsub === 'function') { _communityUnsub(); _communityUnsub = null; }
+        if (Array.isArray(_quickUnsubs)) { _quickUnsubs.forEach(function(fn){ fn(); }); _quickUnsubs = []; }
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('app').classList.remove('show');
         // 숙제 탭/섹션 초기화
@@ -962,25 +963,25 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-sub" style="margin-bottom:0.8rem;">Quick Access</div>
 
       <div class="quick-grid">
-        <div class="quick-card" onclick="switchPage('homework')">
+        <div class="quick-card" onclick="switchPage('homework', null)">
           <span class="q-icon">📝</span>
           <div class="q-label">숙제 제출</div>
-          <div class="q-sub">미제출 2개</div>
+          <div class="q-sub" id="quick-hw">미제출 확인 중...</div>
         </div>
-        <div class="quick-card" onclick="switchPage('community')">
+        <div class="quick-card" onclick="switchPage('community', null)">
           <span class="q-icon">💬</span>
           <div class="q-label">커뮤니티</div>
-          <div class="q-sub">새 글 5개</div>
+          <div class="q-sub" id="quick-community">확인 중...</div>
         </div>
         <div class="quick-card" onclick="window.location.href='ivyel-learn.html'">
           <span class="q-icon">📚</span>
           <div class="q-label">학습 자료</div>
           <div class="q-sub">이번 주 자료</div>
         </div>
-        <div class="quick-card" onclick="switchPage('home'); document.querySelector('.feedback-card') && document.querySelector('.feedback-card').scrollIntoView({behavior:'smooth'})">
+        <div class="quick-card" onclick="switchPage('home', null); setTimeout(function(){ var fc = document.querySelector('.feedback-card'); if(fc) fc.scrollIntoView({behavior:'smooth'}); }, 100)">
           <span class="q-icon">💌</span>
           <div class="q-label">코치 피드백</div>
-          <div class="q-sub">새 메시지 1개</div>
+          <div class="q-sub" id="quick-feedback">확인 중...</div>
         </div>
       </div>
 
@@ -1501,6 +1502,7 @@ function showAppAfterLogin(userData) {
     setTimeout(restoreSubmittedStatus, 500);
     setTimeout(loadHomeFeedback, 600);
     setTimeout(loadCommunityPosts, 700);
+    setTimeout(loadQuickStats, 800);
     // 커뮤니티 글쓰기 아바타 이니셜 동기화
     var ca = document.getElementById('communityAvatar');
     if (ca) ca.textContent = (userData.name || '?').charAt(0);
@@ -1595,6 +1597,52 @@ async function likePost(docId, el) {
     showToast('❤️ 좋아요!');
   } catch(err) { console.error(err); }
 }
+// ── 홈 빠른 메뉴 실시간 업데이트 ──
+var _quickUnsubs = [];
+async function loadQuickStats() {
+  _quickUnsubs.forEach(function(fn) { fn(); });
+  _quickUnsubs = [];
+  var user = window._currentUser;
+  if (!user) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    // ① 숙제 미제출 수 - DOM 감시
+    function updateHwQuick() {
+      var pending = document.querySelectorAll('#hw-pending-section .hw-card[data-hw="pending"]').length;
+      var el = document.getElementById('quick-hw');
+      if (el) el.textContent = pending > 0 ? '미제출 ' + pending + '개' : '모두 제출 완료 ✓';
+    }
+    updateHwQuick();
+    var hwSection = document.getElementById('hw-pending-section');
+    if (hwSection) {
+      var hwObs = new MutationObserver(updateHwQuick);
+      hwObs.observe(hwSection, { subtree: true, attributes: true, attributeFilter: ['data-hw'] });
+      _quickUnsubs.push(function() { hwObs.disconnect(); });
+    }
+
+    // ② 커뮤니티 새 글 수
+    var postUnsub = mod.onSnapshot(mod.collection(window._db, 'posts'), function(snap) {
+      var el = document.getElementById('quick-community');
+      if (el) el.textContent = snap.size > 0 ? '새 글 ' + snap.size + '개' : '첫 글을 남겨보세요';
+    });
+    _quickUnsubs.push(postUnsub);
+
+    // ③ 받은 피드백 수
+    var fbUnsub = mod.onSnapshot(
+      mod.query(mod.collection(window._db, 'homework'),
+        mod.where('studentUid', '==', user.uid),
+        mod.where('status', '==', 'reviewed')),
+      function(snap) {
+        var el = document.getElementById('quick-feedback');
+        if (el) el.textContent = snap.size > 0 ? '받은 피드백 ' + snap.size + '개' : '아직 피드백 없음';
+      }
+    );
+    _quickUnsubs.push(fbUnsub);
+
+  } catch(err) { console.error(err); }
+}
+
 async function loadHomeFeedback() {
   var listEl = document.getElementById('home-feedback-list');
   if (!listEl) return;
