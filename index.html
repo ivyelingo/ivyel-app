@@ -1283,6 +1283,14 @@ textarea.m-input { min-height: 100px; resize: none; }
         </button>
       </div>
 
+      <!-- 학습 자료 관리 -->
+      <div class="sec-title" style="font-size:1.1rem;margin-top:1.4rem;">학습 <em>자료 관리</em></div>
+      <div class="sec-sub" style="margin-bottom:.8rem;">수업별 · 개인별 자료 링크 추가</div>
+      <button onclick="openAddMaterialModal()" style="width:100%;background:linear-gradient(135deg,#4a6fa5,#3a5a95);color:white;border:none;border-radius:14px;padding:.85rem;font-size:.88rem;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:.8rem;">📎 자료 링크 추가하기</button>
+      <div id="coach-materials-list">
+        <div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">불러오는 중...</div>
+      </div>
+
     </div>
 
     <!-- PROFILE -->
@@ -1508,7 +1516,7 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachMaterials(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     // 커뮤니티 글쓰기 박스 - 코치 전용 스타일
@@ -1522,7 +1530,8 @@ function showAppAfterLogin(userData) {
     setTimeout(loadCoachSubmissions, 500);
     setTimeout(loadCoachEnrollments, 600);
     setTimeout(loadCoachStudents, 700);
-    setTimeout(updateApiKeyStatus, 800);
+    setTimeout(loadCoachMaterials, 800);
+    setTimeout(updateApiKeyStatus, 900);
     setTimeout(loadCommunityPosts, 900); // 커뮤니티도 동일 함수 사용
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
@@ -2698,6 +2707,203 @@ async function confirmEnroll(docId, studentName, className) {
     loadCoachStudents();
   } catch(err) {
     showToast('확정에 실패했어요.');
+    console.error(err);
+  }
+}
+
+// ══════════════════════════════════════════
+// 학습 자료 관리
+// ══════════════════════════════════════════
+
+var _classNames = {
+  'bible':'성경영어 소그룹','speaking':'영어 회화 1:1',
+  'writing':'영어 글쓰기 과정','coaching':'영어 코칭','kids':'키즈 영어'
+};
+var _classEmoji = { 'bible':'📖','speaking':'💬','writing':'✍️','coaching':'🌱','kids':'🌿' };
+var _linkIcon = function(url) {
+  if (!url) return '🔗';
+  if (url.includes('youtube') || url.includes('youtu.be')) return '▶️';
+  if (url.includes('drive.google') || url.includes('docs.google')) return '📄';
+  if (url.includes('notion')) return '📝';
+  return '🔗';
+};
+
+// ── 코치: 자료 추가 모달 ──
+async function openAddMaterialModal(editId, editData) {
+  var isEdit = !!editId;
+
+  // 학생 목록 로드
+  var studentOpts = '<option value="all">📢 전체 (수업 공통)</option>';
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var uSnap = await mod.getDocs(mod.query(mod.collection(window._db,'users'), mod.where('role','==','student')));
+    uSnap.forEach(function(ds) {
+      var d = ds.data();
+      studentOpts += '<option value="' + ds.id + '"' + (editData && editData.targetUid === ds.id ? ' selected' : '') + '>' + (d.name||'') + ' (' + (d.email||'') + ')</option>';
+    });
+  } catch(e) {}
+
+  var classOpts = ['bible','speaking','writing','coaching','kids'].map(function(k) {
+    var sel = editData && editData.classKey === k ? ' selected' : '';
+    return '<option value="' + k + '"' + sel + '>' + _classEmoji[k] + ' ' + _classNames[k] + '</option>';
+  }).join('');
+
+  document.getElementById('modalTitle').textContent = isEdit ? '✏️ 자료 수정' : '📎 자료 링크 추가';
+  document.getElementById('modalBody').innerHTML = `
+    <select class="m-input" id="matClass">${classOpts}</select>
+    <select class="m-input" id="matTarget">${studentOpts}</select>
+    <input class="m-input" id="matTitle" placeholder="자료 제목 (예: John 3장 영어 본문)" value="${editData ? editData.title : ''}">
+    <input class="m-input" id="matUrl" type="url" placeholder="링크 URL (Google Drive, YouTube, Notion 등)" value="${editData ? editData.url : ''}">
+    <div style="font-size:.72rem;color:var(--gray);margin:-0.3rem 0 .8rem .2rem;">💡 Google Drive는 공유 링크로 설정해주세요</div>
+    <button class="m-btn" id="matSaveBtn" onclick="saveMaterial('${editId||''}')">
+      ${isEdit ? '수정하기 →' : '추가하기 →'}
+    </button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 코치: 자료 저장 (추가/수정) ──
+async function saveMaterial(editId) {
+  var title  = (document.getElementById('matTitle')||{}).value.trim();
+  var url    = (document.getElementById('matUrl')||{}).value.trim();
+  var cls    = (document.getElementById('matClass')||{}).value;
+  var target = (document.getElementById('matTarget')||{}).value;
+  if (!title) { showToast('자료 제목을 입력해주세요'); return; }
+  if (!url)   { showToast('링크 URL을 입력해주세요'); return; }
+  var btn = document.getElementById('matSaveBtn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var data = {
+      classKey: cls,
+      className: _classNames[cls] || cls,
+      targetUid: target === 'all' ? null : target,  // null = 전체
+      title: title,
+      url: url,
+      updatedAt: mod.serverTimestamp()
+    };
+    if (editId) {
+      await mod.updateDoc(mod.doc(window._db, 'materials', editId), data);
+      showToast('✅ 자료를 수정했어요!');
+    } else {
+      data.createdAt = mod.serverTimestamp();
+      data.createdBy = window._currentUser.uid;
+      await mod.addDoc(mod.collection(window._db, 'materials'), data);
+      showToast('✅ 자료를 추가했어요!');
+    }
+    closeModal();
+    loadCoachMaterials();
+  } catch(err) {
+    showToast('저장 실패. 다시 시도해주세요.');
+    btn.textContent = '추가하기 →'; btn.disabled = false;
+    console.error(err);
+  }
+}
+
+// ── 코치: 자료 목록 로드 ──
+async function loadCoachMaterials() {
+  var listEl = document.getElementById('coach-materials-list');
+  if (!listEl) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.collection(window._db, 'materials'));
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">아직 추가된 자료가 없어요</div>';
+      return;
+    }
+    // 수업별로 그룹핑
+    var grouped = {};
+    snap.forEach(function(ds) {
+      var d = ds.data(); var k = d.classKey || 'etc';
+      if (!grouped[k]) grouped[k] = [];
+      grouped[k].push({ id: ds.id, data: d });
+    });
+
+    var html = '';
+    Object.keys(grouped).forEach(function(cls) {
+      html += '<div style="margin-bottom:.8rem;">'
+        + '<div style="font-size:.75rem;font-weight:600;color:var(--gray);margin-bottom:.4rem;">'
+        + (_classEmoji[cls]||'📚') + ' ' + (_classNames[cls]||cls) + '</div>';
+      grouped[cls].forEach(function(item) {
+        var d = item.data;
+        var icon = _linkIcon(d.url);
+        var targetLabel = d.targetUid ? '👤 개인' : '👥 전체';
+        html += '<div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:var(--warm);border-radius:10px;margin-bottom:.35rem;">'
+          + '<span style="font-size:.9rem;">' + icon + '</span>'
+          + '<div style="flex:1;min-width:0;">'
+          + '<div style="font-size:.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + d.title + '</div>'
+          + '<div style="font-size:.65rem;color:var(--gray);">' + targetLabel + '</div>'
+          + '</div>'
+          + '<button onclick="openAddMaterialModal(\'' + item.id + '\',' + JSON.stringify(d).replace(/'/g,'&apos;') + ')" style="font-size:.7rem;background:none;border:1px solid var(--light);border-radius:20px;padding:.2rem .55rem;cursor:pointer;color:var(--gray);">수정</button>'
+          + '<button onclick="deleteMaterial(\'' + item.id + '\')" style="font-size:.7rem;background:none;border:1px solid var(--rose-light);border-radius:20px;padding:.2rem .55rem;cursor:pointer;color:var(--rose);">삭제</button>'
+          + '</div>';
+      });
+      html += '</div>';
+    });
+    listEl.innerHTML = html;
+  } catch(err) { console.error(err); }
+}
+
+// ── 코치: 자료 삭제 ──
+async function deleteMaterial(docId) {
+  if (!confirm('이 자료를 삭제할까요?')) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.deleteDoc(mod.doc(window._db, 'materials', docId));
+    showToast('삭제됐어요');
+    loadCoachMaterials();
+  } catch(err) { showToast('삭제 실패'); console.error(err); }
+}
+
+// ── 학생: 수업 자료 보기 모달 (Firebase 연동) ──
+async function openClassMaterials(classKey, className) {
+  document.getElementById('modalTitle').textContent = (_classEmoji[classKey]||'📚') + ' ' + className + ' 자료';
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  try {
+    var user = window._currentUser;
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    // 전체 공통 자료 + 나에게 지정된 자료
+    var [snapAll, snapMe] = await Promise.all([
+      mod.getDocs(mod.query(mod.collection(window._db,'materials'),
+        mod.where('classKey','==',classKey), mod.where('targetUid','==',null))),
+      mod.getDocs(mod.query(mod.collection(window._db,'materials'),
+        mod.where('classKey','==',classKey), mod.where('targetUid','==',user.uid)))
+    ]);
+
+    var items = [];
+    snapAll.forEach(function(ds) { items.push(ds.data()); });
+    snapMe.forEach(function(ds) { items.push(Object.assign({}, ds.data(), { personal: true })); });
+
+    if (items.length === 0) {
+      document.getElementById('modalBody').innerHTML = `
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">
+          아직 등록된 자료가 없어요 📭<br>
+          <span style="font-size:.75rem;">코치님이 곧 업로드해드릴게요!</span>
+        </div>`;
+      return;
+    }
+
+    var html = '<div style="background:var(--cream);border-radius:10px;padding:.5rem .9rem;margin-bottom:.8rem;font-size:.72rem;color:var(--gray);">수업 자료를 눌러 바로 열어보세요 🔗</div>';
+    items.forEach(function(d) {
+      var icon = _linkIcon(d.url);
+      var personalBadge = d.personal
+        ? '<span style="font-size:.6rem;background:var(--rose-light);color:var(--rose);border-radius:20px;padding:.1rem .4rem;margin-left:.3rem;">개인</span>'
+        : '';
+      html += '<a href="' + d.url + '" target="_blank" rel="noopener" style="text-decoration:none;">'
+        + '<div style="display:flex;align-items:center;gap:.7rem;padding:.7rem .4rem;border-bottom:1px solid var(--light);">'
+        + '<span style="font-size:1.1rem;">' + icon + '</span>'
+        + '<div style="flex:1;">'
+        + '<div style="font-size:.84rem;color:var(--charcoal);font-weight:500;">' + d.title + personalBadge + '</div>'
+        + '<div style="font-size:.65rem;color:var(--gray);margin-top:.1rem;">' + (d.url.length > 40 ? d.url.substring(0,40) + '...' : d.url) + '</div>'
+        + '</div>'
+        + '<span style="font-size:.8rem;color:var(--rose);">열기 ›</span>'
+        + '</div></a>';
+    });
+    document.getElementById('modalBody').innerHTML = html;
+  } catch(err) {
+    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
     console.error(err);
   }
 }
