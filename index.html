@@ -1213,6 +1213,7 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-title" style="font-size:1.1rem;">학생 <em>목록</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">진도 & 출석 현황</div>
 
+      <!-- 목업 학생 (기존 유지) -->
       <div class="student-card">
         <div class="s-avatar" style="background:linear-gradient(135deg,var(--rose-light),var(--gold-light))">김</div>
         <div class="s-info">
@@ -1251,6 +1252,9 @@ textarea.m-input { min-height: 100px; resize: none; }
         </div>
         <button class="s-action" onclick="openModal('feedback', '이미경')">피드백</button>
       </div>
+
+      <!-- 실제 가입 학생 (Firebase) -->
+      <div id="coach-student-list"></div>
 
       <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">제출된 <em>과제</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">학생 과제 확인 & AI 피드백</div>
@@ -1499,12 +1503,13 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     setTimeout(loadCoachSubmissions, 500);
     setTimeout(loadCoachEnrollments, 600);
-    setTimeout(updateApiKeyStatus, 700);
+    setTimeout(loadCoachStudents, 700);
+    setTimeout(updateApiKeyStatus, 800);
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
@@ -2119,7 +2124,124 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ── 코치: 수강 신청 목록 로드 ──
+// ── 코치: 실제 가입 학생 목록 로드 ──
+async function loadCoachStudents() {
+  var listEl = document.getElementById('coach-student-list');
+  if (!listEl) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    // users 컬렉션에서 student 역할만
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'users'),
+      mod.where('role', '==', 'student')
+    ));
+
+    if (snap.empty) { listEl.innerHTML = ''; return; }
+
+    // 각 학생의 제출 과제 수 & 수강 중인 수업도 가져오기
+    var students = [];
+    snap.forEach(function(ds) { students.push({ uid: ds.id, data: ds.data() }); });
+    students.sort(function(a, b) {
+      var ta = a.data.createdAt ? a.data.createdAt.seconds : 0;
+      var tb = b.data.createdAt ? b.data.createdAt.seconds : 0;
+      return ta - tb; // 가입 순
+    });
+
+    // 각 학생별 제출 수 & 수강 수업 병렬 조회
+    var avatarColors = [
+      'linear-gradient(135deg,var(--rose-light),var(--gold-light))',
+      'linear-gradient(135deg,var(--sage-light),var(--gold-light))',
+      'linear-gradient(135deg,var(--gold-light),var(--rose-light))',
+      'linear-gradient(135deg,var(--cream),var(--sage-light))'
+    ];
+
+    var html = '';
+    for (var i = 0; i < students.length; i++) {
+      var s = students[i];
+      var d = s.data;
+      var color = avatarColors[i % avatarColors.length];
+      var initial = (d.name || '?').charAt(0);
+
+      // 수강 중인 수업 조회
+      var enrollSnap = await mod.getDocs(mod.query(
+        mod.collection(window._db, 'enrollments'),
+        mod.where('studentUid', '==', s.uid),
+        mod.where('status', '==', 'confirmed')
+      ));
+      var enrollPendingSnap = await mod.getDocs(mod.query(
+        mod.collection(window._db, 'enrollments'),
+        mod.where('studentUid', '==', s.uid),
+        mod.where('status', '==', 'pending')
+      ));
+
+      // 제출한 과제 수
+      var hwSnap = await mod.getDocs(mod.query(
+        mod.collection(window._db, 'homework'),
+        mod.where('studentUid', '==', s.uid)
+      ));
+
+      var confirmedClasses = [];
+      enrollSnap.forEach(function(e) { confirmedClasses.push(e.data().className); });
+      var pendingCount = enrollPendingSnap.size;
+      var hwCount = hwSnap.size;
+
+      var classLabel = confirmedClasses.length > 0
+        ? confirmedClasses.join(' · ')
+        : (pendingCount > 0 ? '⏳ 신청 대기 ' + pendingCount + '개' : '수강 수업 없음');
+
+      var joinDate = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('ko-KR') : '';
+
+      html += '<div class="student-card">'
+        + '<div class="s-avatar" style="background:' + color + '">' + initial + '</div>'
+        + '<div class="s-info">'
+        + '<div class="s-name">' + (d.name || '이름 없음') + '</div>'
+        + '<div class="s-class">' + classLabel + '</div>'
+        + '<div class="s-progress">'
+        + '<div class="s-progress-text"><span>제출 과제</span><span>' + hwCount + '개</span></div>'
+        + '<div style="font-size:.68rem;color:var(--gray);">가입일 ' + joinDate + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<button class="s-action" onclick="openManualFeedbackForStudent(\'' + s.uid + '\',\'' + (d.name||'') + '\')">피드백</button>'
+        + '</div>';
+    }
+
+    // 총 학생 수 업데이트
+    var statEls = document.querySelectorAll('.cs-num');
+    if (statEls[0]) statEls[0].textContent = 3 + students.length; // 목업 3 + 실제
+
+    listEl.innerHTML = html || '';
+  } catch(err) {
+    console.error(err);
+    listEl.innerHTML = '';
+  }
+}
+
+// ── 코치: 특정 학생에게 직접 피드백 (별도 홈 피드백 컬렉션) ──
+function openManualFeedbackForStudent(uid, name) {
+  document.getElementById('modalTitle').textContent = '✏️ ' + name + '님께 피드백';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">학생 홈 화면 피드백 카드에 표시돼요</div>
+    <textarea id="directFbText" class="m-input" rows="5" placeholder="피드백을 남겨주세요..."></textarea>
+    <button class="m-btn" onclick="sendDirectFeedback('${uid}','${name}')">전송하기 →</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function sendDirectFeedback(uid, name) {
+  var text = (document.getElementById('directFbText') || {}).value.trim();
+  if (!text) { showToast('내용을 입력해주세요'); return; }
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await window._addDoc(window._collection(window._db, 'directFeedbacks'), {
+      studentUid: uid,
+      studentName: name,
+      feedback: text,
+      createdAt: mod.serverTimestamp()
+    });
+    closeModal();
+    showToast('✅ ' + name + '님께 피드백을 전송했어요!');
+  } catch(err) { showToast('전송 실패'); console.error(err); }
+}
 async function loadCoachEnrollments() {
   var listEl = document.getElementById('coach-enroll-list');
   if (!listEl) return;
