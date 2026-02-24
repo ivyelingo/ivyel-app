@@ -1008,7 +1008,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         <button class="cf-btn" onclick="cfFilter('kids', this)">🌿 어린이</button>
       </div>
 
-      <div class="class-card" data-type="bible">
+      <div class="class-card" data-type="bible" id="cc-bible">
         <div class="cc-top">
           <div class="cc-emoji">📖</div>
           <span class="cc-badge enrolled">✓ 수강 중</span>
@@ -1025,7 +1025,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         <button class="cc-btn enrolled-btn">✓ 수강 중 · 자료 보기</button>
       </div>
 
-      <div class="class-card" data-type="speaking">
+      <div class="class-card" data-type="speaking" id="cc-speaking">
         <div class="cc-top">
           <div class="cc-emoji">💬</div>
           <span class="cc-badge enrolled">✓ 수강 중</span>
@@ -1042,10 +1042,10 @@ textarea.m-input { min-height: 100px; resize: none; }
         <button class="cc-btn enrolled-btn">✓ 수강 중 · 자료 보기</button>
       </div>
 
-      <div class="class-card" data-type="writing">
+      <div class="class-card" data-type="writing" id="cc-writing">
         <div class="cc-top">
           <div class="cc-emoji">✍️</div>
-          <span class="cc-badge open">모집 중</span>
+          <span class="cc-badge open" id="badge-writing">모집 중</span>
         </div>
         <div class="cc-name">영어 글쓰기 과정</div>
         <div class="cc-desc">일기부터 에세이까지, 나만의 영어 글쓰기 루틴을 만들어요.</div>
@@ -1054,13 +1054,13 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="cc-meta-item">⏰ 오전 10시</div>
           <div class="cc-meta-item">👥 소그룹</div>
         </div>
-        <button class="cc-btn primary" onclick="openModal('enroll', '영어 글쓰기 과정')">수강 신청하기</button>
+        <button class="cc-btn primary" id="btn-writing" onclick="openEnrollModal('writing', '영어 글쓰기 과정')">수강 신청하기</button>
       </div>
 
-      <div class="class-card" data-type="coaching">
+      <div class="class-card" data-type="coaching" id="cc-coaching">
         <div class="cc-top">
           <div class="cc-emoji">🌱</div>
-          <span class="cc-badge open">모집 중</span>
+          <span class="cc-badge open" id="badge-coaching">모집 중</span>
         </div>
         <div class="cc-name">영어 코칭 (자신감/동기)</div>
         <div class="cc-desc">영어 실력보다 마인드셋부터. 1:1 코칭으로 자신감을 키워요.</div>
@@ -1069,13 +1069,13 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="cc-meta-item">⏰ 오전 11시</div>
           <div class="cc-meta-item">👤 1:1</div>
         </div>
-        <button class="cc-btn primary" onclick="openModal('enroll', '영어 코칭')">수강 신청하기</button>
+        <button class="cc-btn primary" id="btn-coaching" onclick="openEnrollModal('coaching', '영어 코칭')">수강 신청하기</button>
       </div>
 
-      <div class="class-card" data-type="kids">
+      <div class="class-card" data-type="kids" id="cc-kids">
         <div class="cc-top">
           <div class="cc-emoji">🌿</div>
-          <span class="cc-badge open">모집 중</span>
+          <span class="cc-badge open" id="badge-kids">모집 중</span>
         </div>
         <div class="cc-name">키즈 영어</div>
         <div class="cc-desc">노래, 스토리, 게임으로 영어가 자연스럽게 스며드는 어린이 수업.</div>
@@ -1084,7 +1084,7 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="cc-meta-item">⏰ 오후 4시</div>
           <div class="cc-meta-item">👥 소그룹</div>
         </div>
-        <button class="cc-btn primary" onclick="openModal('enroll', '키즈 영어')">수강 신청하기</button>
+        <button class="cc-btn primary" id="btn-kids" onclick="openEnrollModal('kids', '키즈 영어')">수강 신청하기</button>
       </div>
     </div>
 
@@ -1257,6 +1257,13 @@ textarea.m-input { min-height: 100px; resize: none; }
 
       <!-- 실시간 제출 목록 -->
       <div id="coach-hw-list">
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
+      </div>
+
+      <!-- 수강 신청 목록 -->
+      <div class="sec-title" style="font-size:1.1rem;margin-top:1.2rem;">수강 <em>신청</em></div>
+      <div class="sec-sub" style="margin-bottom:.8rem;">신청 확인 & 수락</div>
+      <div id="coach-enroll-list">
         <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
 
@@ -1492,17 +1499,19 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     setTimeout(loadCoachSubmissions, 500);
-    setTimeout(updateApiKeyStatus, 600);
+    setTimeout(loadCoachEnrollments, 600);
+    setTimeout(updateApiKeyStatus, 700);
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
     setTimeout(loadHomeFeedback, 600);
     setTimeout(loadCommunityPosts, 700);
     setTimeout(loadQuickStats, 800);
+    setTimeout(restoreEnrollments, 900);
     // 커뮤니티 글쓰기 아바타 이니셜 동기화
     var ca = document.getElementById('communityAvatar');
     if (ca) ca.textContent = (userData.name || '?').charAt(0);
@@ -1843,6 +1852,112 @@ async function loadMySubmissions() {
   }
 }
 
+// ── 수강 신청 모달 ──
+function openEnrollModal(classKey, className) {
+  document.getElementById('modalTitle').textContent = '📋 수강 신청';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:var(--cream);border-radius:12px;padding:.8rem 1rem;margin-bottom:1rem;">
+      <div style="font-size:.72rem;color:var(--gray);margin-bottom:.2rem;">신청 수업</div>
+      <div style="font-size:1rem;font-weight:600;font-family:'Cormorant Garamond',serif;">${className}</div>
+    </div>
+    <input class="m-input" id="enrollPhone" type="tel" placeholder="연락처 (선택)">
+    <select class="m-input" id="enrollMode">
+      <option value="온라인">💻 온라인 (Zoom)</option>
+      <option value="대면">🏫 대면</option>
+      <option value="상관없음">✨ 상관없음</option>
+    </select>
+    <textarea class="m-input" id="enrollNote" rows="3" placeholder="남기실 말씀 (선택)"></textarea>
+    <button class="m-btn" id="enrollSubmitBtn" onclick="submitEnroll('${classKey}','${className}')">신청하기 →</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 수강 신청 Firebase 저장 ──
+async function submitEnroll(classKey, className) {
+  var btn = document.getElementById('enrollSubmitBtn');
+  if (btn) { btn.textContent = '신청 중...'; btn.disabled = true; }
+  try {
+    var user = window._currentUser;
+    var phone = (document.getElementById('enrollPhone') || {}).value || '';
+    var mode = (document.getElementById('enrollMode') || {}).value || '온라인';
+    var note = (document.getElementById('enrollNote') || {}).value || '';
+
+    // 중복 신청 방지
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var existing = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'enrollments'),
+      mod.where('studentUid', '==', user.uid),
+      mod.where('classKey', '==', classKey)
+    ));
+    if (!existing.empty) {
+      closeModal();
+      showToast('이미 신청한 수업이에요');
+      return;
+    }
+
+    await window._addDoc(window._collection(window._db, 'enrollments'), {
+      studentUid: user.uid,
+      studentName: user.name,
+      studentEmail: user.email,
+      classKey: classKey,
+      className: className,
+      phone: phone,
+      mode: mode,
+      note: note,
+      status: 'pending',
+      appliedAt: window._serverTimestamp()
+    });
+
+    closeModal();
+    showToast('✅ 신청 완료! 코치님이 1-2일 내 연락드릴게요 💌');
+    applyEnrollStyle(classKey, 'pending');
+  } catch(err) {
+    showToast('신청에 실패했어요. 다시 시도해주세요.');
+    if (btn) { btn.textContent = '신청하기 →'; btn.disabled = false; }
+    console.error(err);
+  }
+}
+
+// ── 신청/확정 상태에 따라 카드 UI 변경 ──
+function applyEnrollStyle(classKey, status) {
+  var badge = document.getElementById('badge-' + classKey);
+  var btn = document.getElementById('btn-' + classKey);
+  if (!badge || !btn) return;
+  if (status === 'pending') {
+    badge.textContent = '⏳ 신청 대기';
+    badge.className = 'cc-badge';
+    badge.style.cssText = 'background:var(--gold-light);color:#8a6a30;';
+    btn.textContent = '⏳ 신청 완료 · 확인 대기 중';
+    btn.className = 'cc-btn';
+    btn.style.cssText = 'background:var(--gold-light);color:#8a6a30;cursor:default;';
+    btn.onclick = null;
+  } else if (status === 'confirmed') {
+    badge.textContent = '✓ 수강 확정';
+    badge.className = 'cc-badge enrolled';
+    badge.style.cssText = '';
+    btn.textContent = '✓ 수강 확정 · 자료 보기';
+    btn.className = 'cc-btn enrolled-btn';
+    btn.style.cssText = '';
+    btn.onclick = null;
+  }
+}
+
+// ── 로그인 시 수강 신청 내역 복원 ──
+async function restoreEnrollments() {
+  try {
+    var user = window._currentUser;
+    if (!user) return;
+    var q = window._query(
+      window._collection(window._db, 'enrollments'),
+      window._where('studentUid', '==', user.uid)
+    );
+    var snap = await window._getDocs(q);
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      applyEnrollStyle(d.classKey, d.status);
+    });
+  } catch(err) { console.error(err); }
+}
+
 // ── 과제 실제 제출 (Firebase 저장) ──
 async function submitHomework(hwTitle) {
   var text = (document.getElementById('hwText') || {}).value || '';
@@ -2002,6 +2117,66 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── 코치: 수강 신청 목록 로드 ──
+async function loadCoachEnrollments() {
+  var listEl = document.getElementById('coach-enroll-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.collection(window._db, 'enrollments'));
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">신청 내역이 없어요</div>';
+      return;
+    }
+    var docs = [];
+    snap.forEach(function(ds) { docs.push({ id: ds.id, data: ds.data() }); });
+    docs.sort(function(a, b) {
+      var ta = a.data.appliedAt ? a.data.appliedAt.seconds : 0;
+      var tb = b.data.appliedAt ? b.data.appliedAt.seconds : 0;
+      return tb - ta;
+    });
+    var html = '';
+    docs.forEach(function(item) {
+      var d = item.data; var docId = item.id;
+      var isPending = d.status === 'pending';
+      var date = d.appliedAt ? new Date(d.appliedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      html += '<div class="hw-card">'
+        + '<div class="hw-top">'
+        + '<div class="hw-class">🎓 ' + (d.studentName || '학생') + '</div>'
+        + '<span class="hw-status ' + (isPending ? 'pending' : 'done') + '">' + (isPending ? '⏳ 대기 중' : '✓ 확정') + '</span>'
+        + '</div>'
+        + '<div class="hw-title" style="font-size:.92rem;">' + (d.className || '') + '</div>'
+        + '<div style="font-size:.78rem;color:var(--gray);margin:.3rem 0;">📱 ' + (d.mode || '') + (d.phone ? ' · ' + d.phone : '') + ' · ' + date + '</div>'
+        + (d.note ? '<div style="font-size:.78rem;background:var(--cream);border-radius:8px;padding:.4rem .7rem;margin:.3rem 0;">' + d.note + '</div>' : '')
+        + (isPending
+          ? '<button onclick="confirmEnroll(\'' + docId + '\',\'' + (d.studentName||'') + '\',\'' + (d.className||'') + '\')" style="width:100%;margin-top:.6rem;background:linear-gradient(135deg,var(--sage),#5a9a60);color:white;border:none;border-radius:100px;padding:.55rem;font-size:.78rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✓ 수강 확정하기</button>'
+          : '<div style="font-size:.75rem;color:var(--sage);text-align:center;margin-top:.5rem;font-weight:600;">✓ 수강 확정 완료</div>')
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+  } catch(err) {
+    listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+// ── 코치: 수강 확정 ──
+async function confirmEnroll(docId, studentName, className) {
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.updateDoc(mod.doc(window._db, 'enrollments', docId), {
+      status: 'confirmed',
+      confirmedAt: mod.serverTimestamp()
+    });
+    showToast('✅ ' + studentName + '님 ' + className + ' 수강 확정!');
+    loadCoachEnrollments();
+  } catch(err) {
+    showToast('확정에 실패했어요.');
+    console.error(err);
+  }
 }
 
 // ── API 키 관리 ──
