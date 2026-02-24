@@ -987,10 +987,8 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-title">코치 <em>피드백</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">최근 받은 피드백</div>
 
-      <div class="feedback-card">
-        <div class="fb-from">🌸 코치 메시지</div>
-        <div class="fb-content">지은님, 이번 주 회화 수업에서 정말 많이 늘었어요! 특히 자연스럽게 연결사를 쓰는 부분이 좋았어요. 다음 주엔 과거 시제 표현을 좀 더 연습해봐요 💪</div>
-        <div class="fb-time">어제 오후 3:22</div>
+      <div id="home-feedback-list">
+        <div class="feedback-card" style="text-align:center;color:var(--gray);font-size:.82rem;">불러오는 중...</div>
       </div>
     </div>
 
@@ -1500,10 +1498,62 @@ function showAppAfterLogin(userData) {
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
+    setTimeout(loadHomeFeedback, 600);
   }
 }
 
-// ── 로그인 후 이미 제출한 과제 상태 복원 ──
+// ── 홈 화면: 최근 받은 피드백 로드 ──
+async function loadHomeFeedback() {
+  var listEl = document.getElementById('home-feedback-list');
+  if (!listEl) return;
+  try {
+    var user = window._currentUser;
+    if (!user) return;
+    var q = window._query(
+      window._collection(window._db, 'homework'),
+      window._where('studentUid', '==', user.uid),
+      window._where('status', '==', 'reviewed')
+    );
+    var snap = await window._getDocs(q);
+    if (snap.empty) {
+      listEl.innerHTML = '<div class="feedback-card" style="text-align:center;color:var(--gray);font-size:.82rem;padding:1.2rem;">아직 받은 피드백이 없어요 🌱</div>';
+      return;
+    }
+    // 최신순 정렬 후 최대 3건
+    var docs = [];
+    snap.forEach(function(ds) { docs.push(ds.data()); });
+    docs.sort(function(a, b) {
+      var ta = a.feedbackAt ? a.feedbackAt.seconds : (a.submittedAt ? a.submittedAt.seconds : 0);
+      var tb = b.feedbackAt ? b.feedbackAt.seconds : (b.submittedAt ? b.submittedAt.seconds : 0);
+      return tb - ta;
+    });
+    docs = docs.slice(0, 3);
+
+    var html = '';
+    docs.forEach(function(d) {
+      var ts = d.feedbackAt || d.submittedAt;
+      var timeStr = ts ? timeAgo(new Date(ts.seconds * 1000)) : '';
+      html += '<div class="feedback-card">'
+        + '<div class="fb-from">🌸 ' + (d.hwTitle || '과제') + ' 피드백</div>'
+        + '<div class="fb-content">' + (d.feedback || '') + '</div>'
+        + '<div class="fb-time">' + timeStr + '</div>'
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+  } catch(err) {
+    listEl.innerHTML = '<div class="feedback-card" style="text-align:center;color:var(--gray);font-size:.82rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+function timeAgo(date) {
+  var diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 60) return '방금 전';
+  if (diff < 3600) return Math.floor(diff / 60) + '분 전';
+  if (diff < 86400) return Math.floor(diff / 3600) + '시간 전';
+  if (diff < 604800) return Math.floor(diff / 86400) + '일 전';
+  return date.toLocaleDateString('ko-KR');
+}
 async function restoreSubmittedStatus() {
   try {
     var user = window._currentUser;
@@ -1557,6 +1607,10 @@ function switchPage(name, navEl) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (navEl) navEl.classList.add('active');
   currentPage = name;
+  // 홈으로 돌아올 때 피드백 새로고침
+  if (name === 'home' && window._currentUser && window._currentUser.role !== 'coach') {
+    loadHomeFeedback();
+  }
 }
 
 function cfFilter(type, el) {
