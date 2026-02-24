@@ -820,6 +820,13 @@ textarea.m-input { min-height: 100px; resize: none; }
         if (typeof _communityUnsub === 'function') { _communityUnsub(); _communityUnsub = null; }
         if (typeof _coachCommunityUnsub === 'function') { _coachCommunityUnsub(); _coachCommunityUnsub = null; }
         if (Array.isArray(_quickUnsubs)) { _quickUnsubs.forEach(function(fn){ fn(); }); _quickUnsubs = []; }
+        // 커뮤니티 글쓰기 박스 리셋
+        var ca = document.getElementById('communityAvatar');
+        var ct = document.getElementById('communityWriteText');
+        var wb = document.getElementById('communityWriteBox');
+        if (ca) { ca.textContent = '?'; ca.style.background = ''; ca.style.color = ''; }
+        if (ct) ct.textContent = '오늘의 영어 한마디를 나눠보세요... ✍️';
+        if (wb) wb.style.borderColor = '';
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('app').classList.remove('show');
         // 숙제 탭/섹션 초기화
@@ -1136,9 +1143,10 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-title">커뮤니티 <em>게시판</em></div>
       <div class="sec-sub">함께 나누고 응원해요</div>
 
-      <div class="community-write" onclick="openModal('write', '')">
-        <div class="avatar" id="communityAvatar" style="width:32px;height:32px;font-size:0.8rem;">김</div>
-        <div class="cw-text">오늘의 영어 한마디를 나눠보세요... ✍️</div>
+      <!-- 글쓰기 박스 (학생/코치 공통, 내용만 로그인 후 업데이트) -->
+      <div class="community-write" id="communityWriteBox" onclick="openModal('write', '')">
+        <div class="avatar" id="communityAvatar" style="width:32px;height:32px;font-size:0.8rem;">?</div>
+        <div class="cw-text" id="communityWriteText">오늘의 영어 한마디를 나눠보세요... ✍️</div>
       </div>
 
       <!-- Firebase에서 로드된 새 글 -->
@@ -1283,12 +1291,6 @@ textarea.m-input { min-height: 100px; resize: none; }
         </button>
       </div>
 
-      <!-- 커뮤니티 새 글 -->
-      <div class="sec-title" style="font-size:1.1rem;margin-top:1.4rem;">커뮤니티 <em>새 글</em></div>
-      <div class="sec-sub" style="margin-bottom:.8rem;">학생들의 최근 게시글</div>
-      <div id="coach-community-list">
-        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
-      </div>
     </div>
 
     <!-- PROFILE -->
@@ -1514,14 +1516,22 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachCommunity(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
+    // 커뮤니티 글쓰기 박스 - 코치 전용 스타일
+    var ca = document.getElementById('communityAvatar');
+    var ct = document.getElementById('communityWriteText');
+    var wb = document.getElementById('communityWriteBox');
+    if (ca) { ca.textContent = initial; ca.style.background = 'var(--charcoal)'; ca.style.color = 'var(--gold)'; }
+    if (ct) ct.textContent = '학생들에게 공지나 응원 메시지를 남겨보세요... 📣';
+    if (wb) wb.style.borderColor = 'var(--gold-light)';
+
     setTimeout(loadCoachSubmissions, 500);
     setTimeout(loadCoachEnrollments, 600);
     setTimeout(loadCoachStudents, 700);
-    setTimeout(loadCoachCommunity, 800);
-    setTimeout(updateApiKeyStatus, 900);
+    setTimeout(updateApiKeyStatus, 800);
+    setTimeout(loadCommunityPosts, 900); // 커뮤니티도 동일 함수 사용
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
@@ -1531,7 +1541,9 @@ function showAppAfterLogin(userData) {
     setTimeout(restoreEnrollments, 900);
     // 커뮤니티 글쓰기 아바타 이니셜 동기화
     var ca = document.getElementById('communityAvatar');
-    if (ca) ca.textContent = (userData.name || '?').charAt(0);
+    var wb = document.getElementById('communityWriteBox');
+    if (ca) { ca.textContent = initial; ca.style.background = ''; ca.style.color = ''; }
+    if (wb) wb.style.borderColor = '';
   }
 }
 
@@ -2103,15 +2115,17 @@ function openModal(type, data) {
       <textarea class="m-input" rows="5" placeholder="오늘 수업 피드백을 남겨주세요..."></textarea>
       <button class="m-btn" onclick="closeModal(); showToast('✅ 피드백을 전송했어요!')">전송하기</button>`;
   } else if (type === 'write') {
-    title.textContent = '✍️ 글 쓰기';
+    var isCoach = window._currentUser && window._currentUser.role === 'coach';
+    title.textContent = isCoach ? '📣 공지 / 응원 글쓰기' : '✍️ 글 쓰기';
+    var placeholder = isCoach
+      ? '학생들에게 전하고 싶은 공지나 응원 메시지를 남겨보세요...'
+      : '오늘의 영어 한마디, 나눔, 질문을 자유롭게 써주세요...';
+    var categoryOptions = isCoach
+      ? '<option value="공지">📣 공지</option><option value="응원">💛 응원</option><option value="성경영어">📖 성경영어</option><option value="회화">💬 회화</option>'
+      : '<option value="성경영어">📖 성경영어</option><option value="회화">💬 회화</option><option value="일반">🌱 일반</option><option value="질문">❓ 질문</option>';
     body.innerHTML = `
-      <select class="m-input" id="postCategory">
-        <option value="성경영어">📖 성경영어</option>
-        <option value="회화">💬 회화</option>
-        <option value="일반">🌱 일반</option>
-        <option value="질문">❓ 질문</option>
-      </select>
-      <textarea class="m-input" id="postContent" rows="5" placeholder="오늘의 영어 한마디, 나눔, 질문을 자유롭게 써주세요..."></textarea>
+      <select class="m-input" id="postCategory">${categoryOptions}</select>
+      <textarea class="m-input" id="postContent" rows="5" placeholder="${placeholder}"></textarea>
       <button class="m-btn" id="postSubmitBtn" onclick="submitPost()">게시하기 →</button>`;
   }
 
