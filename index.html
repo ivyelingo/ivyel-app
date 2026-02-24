@@ -946,25 +946,11 @@ textarea.m-input { min-height: 100px; resize: none; }
       <!-- Today's class -->
       <div class="sec-title">오늘의 <em>수업</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">Today's Schedule</div>
-
-      <div class="today-class">
-        <div class="today-icon">📖</div>
-        <div class="today-info">
-          <div class="t-label">성경영어 소그룹</div>
-          <div class="t-name">John 3:16 — 영어로 읽기</div>
-          <div class="t-time">오후 2:00 · Zoom · 60분</div>
+      <div id="home-today-classes">
+        <div style="background:var(--warm);border-radius:14px;padding:1rem;text-align:center;font-size:.82rem;color:var(--gray);">
+          수강 중인 수업이 없어요.<br>
+          <span style="font-size:.75rem;">수업 탭에서 신청해보세요 →</span>
         </div>
-        <button class="today-btn" onclick="openZoom()">입장</button>
-      </div>
-
-      <div class="today-class" style="background: linear-gradient(135deg, var(--sage-light), var(--gold-light));">
-        <div class="today-icon">💬</div>
-        <div class="today-info">
-          <div class="t-label">회화 1:1</div>
-          <div class="t-name">Daily Conversation Practice</div>
-          <div class="t-time">오후 4:00 · Zoom · 50분</div>
-        </div>
-        <button class="today-btn" onclick="openZoom()">입장</button>
       </div>
 
       <!-- Quick actions -->
@@ -1020,7 +1006,7 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="class-card" data-type="bible" id="cc-bible">
         <div class="cc-top">
           <div class="cc-emoji">📖</div>
-          <span class="cc-badge enrolled">✓ 수강 중</span>
+          <span class="cc-badge open" id="badge-bible">모집 중</span>
         </div>
         <div class="cc-name">성경영어 소그룹</div>
         <div class="cc-desc">말씀을 영어로 읽고 나누며 영어와 신앙이 함께 자라는 수업입니다.</div>
@@ -1029,15 +1015,13 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="cc-meta-item">⏰ 오후 2시</div>
           <div class="cc-meta-item">👥 소그룹</div>
         </div>
-        <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
-        <div style="font-size:0.68rem; color:var(--gray); margin:0.3rem 0 0.8rem;">진도 75% — 12/16 완료</div>
-        <button class="cc-btn enrolled-btn" onclick="openClassMaterials('bible','성경영어 소그룹')">✓ 수강 중 · 자료 보기</button>
+        <button class="cc-btn primary" id="btn-bible" onclick="openEnrollModal('bible', '성경영어 소그룹')">수강 신청하기</button>
       </div>
 
       <div class="class-card" data-type="speaking" id="cc-speaking">
         <div class="cc-top">
           <div class="cc-emoji">💬</div>
-          <span class="cc-badge enrolled">✓ 수강 중</span>
+          <span class="cc-badge open" id="badge-speaking">모집 중</span>
         </div>
         <div class="cc-name">영어 회화 1:1</div>
         <div class="cc-desc">맞춤 피드백으로 실제 영어 회화 자신감을 키웁니다.</div>
@@ -1046,9 +1030,7 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="cc-meta-item">⏰ 오후 4시</div>
           <div class="cc-meta-item">👤 1:1</div>
         </div>
-        <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
-        <div style="font-size:0.68rem; color:var(--gray); margin:0.3rem 0 0.8rem;">진도 50% — 8/16 완료</div>
-        <button class="cc-btn enrolled-btn" onclick="openClassMaterials('speaking','영어 회화 1:1')">✓ 수강 중 · 자료 보기</button>
+        <button class="cc-btn primary" id="btn-speaking" onclick="openEnrollModal('speaking', '영어 회화 1:1')">수강 신청하기</button>
       </div>
 
       <div class="class-card" data-type="writing" id="cc-writing">
@@ -1546,6 +1528,7 @@ function showAppAfterLogin(userData) {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
     setTimeout(loadHomeFeedback, 600);
+    setTimeout(loadHomeTodayClasses, 650);
     setTimeout(loadCommunityPosts, 700);
     setTimeout(loadQuickStats, 800);
     setTimeout(restoreEnrollments, 900);
@@ -1648,6 +1631,52 @@ async function likePost(docId, el) {
 }
 // ── 홈 빠른 메뉴 실시간 업데이트 ──
 var _quickUnsubs = [];
+// ── 홈: 오늘의 수업 (수강 확정 기반 동적 표시) ──
+var classSchedule = {
+  'bible':    { icon:'📖', label:'성경영어 소그룹',  topic:'말씀 영어로 읽기', time:'오후 2:00 · Zoom · 60분', bg:'' },
+  'speaking': { icon:'💬', label:'영어 회화 1:1',    topic:'Daily Conversation', time:'오후 4:00 · Zoom · 50분', bg:'background:linear-gradient(135deg,var(--sage-light),var(--gold-light));' },
+  'writing':  { icon:'✍️', label:'영어 글쓰기 과정', topic:'이번 주 에세이 작성', time:'오전 10:00 · Zoom · 60분', bg:'' },
+  'coaching': { icon:'🌱', label:'영어 코칭',        topic:'목표 설정 & 동기 코칭', time:'격주 토 11:00 · Zoom · 50분', bg:'' },
+  'kids':     { icon:'🌿', label:'키즈 영어',        topic:'Phonics & Song Time', time:'오후 4:00 · Zoom · 40분', bg:'' }
+};
+
+async function loadHomeTodayClasses() {
+  var el = document.getElementById('home-today-classes');
+  if (!el) return;
+  try {
+    var user = window._currentUser;
+    if (!user) return;
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'enrollments'),
+      mod.where('studentUid', '==', user.uid),
+      mod.where('status', '==', 'confirmed')
+    ));
+    if (snap.empty) {
+      el.innerHTML = '<div style="background:var(--warm);border-radius:14px;padding:1rem 1.2rem;text-align:center;font-size:.82rem;color:var(--gray);">수강 중인 수업이 없어요.<br><span style="font-size:.75rem;">수업 탭에서 신청해보세요 →</span></div>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      var info = classSchedule[d.classKey] || { icon:'📚', label:d.className, topic:'수업 중', time:'', bg:'' };
+      html += '<div class="today-class" style="' + info.bg + 'margin-bottom:.6rem;">'
+        + '<div class="today-icon">' + info.icon + '</div>'
+        + '<div class="today-info">'
+        + '<div class="t-label">' + info.label + '</div>'
+        + '<div class="t-name">' + info.topic + '</div>'
+        + '<div class="t-time">' + info.time + '</div>'
+        + '</div>'
+        + '<button class="today-btn" onclick="openZoom()">입장</button>'
+        + '</div>';
+    });
+    el.innerHTML = html;
+  } catch(err) {
+    el.innerHTML = '<div style="text-align:center;font-size:.82rem;color:var(--gray);padding:.8rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
 async function loadQuickStats() {
   _quickUnsubs.forEach(function(fn) { fn(); });
   _quickUnsubs = [];
@@ -1837,6 +1866,7 @@ function switchPage(name, navEl) {
   // 홈으로 돌아올 때 피드백 새로고침
   if (name === 'home' && window._currentUser && window._currentUser.role !== 'coach') {
     loadHomeFeedback();
+    loadHomeTodayClasses();
   }
 }
 
@@ -2665,6 +2695,7 @@ async function confirmEnroll(docId, studentName, className) {
     });
     showToast('✅ ' + studentName + '님 ' + className + ' 수강 확정!');
     loadCoachEnrollments();
+    loadCoachStudents();
   } catch(err) {
     showToast('확정에 실패했어요.');
     console.error(err);
