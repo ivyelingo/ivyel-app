@@ -1224,7 +1224,7 @@ textarea.m-input { min-height: 100px; resize: none; }
             <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
           </div>
         </div>
-        <button class="s-action" onclick="openModal('feedback', '김지은')">피드백</button>
+        <button class="s-action" onclick="openMockStudentFeedback('김지은')">피드백</button>
       </div>
 
       <div class="student-card">
@@ -1237,7 +1237,7 @@ textarea.m-input { min-height: 100px; resize: none; }
             <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
           </div>
         </div>
-        <button class="s-action" onclick="openModal('feedback', '박수연')">피드백</button>
+        <button class="s-action" onclick="openMockStudentFeedback('박수연')">피드백</button>
       </div>
 
       <div class="student-card">
@@ -1250,7 +1250,7 @@ textarea.m-input { min-height: 100px; resize: none; }
             <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
           </div>
         </div>
-        <button class="s-action" onclick="openModal('feedback', '이미경')">피드백</button>
+        <button class="s-action" onclick="openMockStudentFeedback('이미경')">피드백</button>
       </div>
 
       <!-- 실제 가입 학생 (Firebase) -->
@@ -1663,33 +1663,71 @@ async function loadHomeFeedback() {
   try {
     var user = window._currentUser;
     if (!user) return;
-    var q = window._query(
-      window._collection(window._db, 'homework'),
-      window._where('studentUid', '==', user.uid),
-      window._where('status', '==', 'reviewed')
-    );
-    var snap = await window._getDocs(q);
-    if (snap.empty) {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    // ① 과제 피드백 (homework 컬렉션)
+    var hwSnap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'homework'),
+      mod.where('studentUid', '==', user.uid),
+      mod.where('status', '==', 'reviewed')
+    ));
+
+    // ② 직접 피드백 (directFeedbacks 컬렉션) - UID 또는 이름으로 조회
+    var dfSnap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'directFeedbacks'),
+      mod.where('studentUid', '==', user.uid)
+    ));
+    // 이름 기반 피드백도 병합 (목업 학생 대응)
+    var dfNameSnap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'directFeedbacks'),
+      mod.where('studentName', '==', user.name),
+      mod.where('studentUid', '==', null)
+    ));
+
+    var allDocs = [];
+
+    hwSnap.forEach(function(ds) {
+      var d = ds.data();
+      allDocs.push({
+        label: '🌸 ' + (d.hwTitle || '과제') + ' 피드백',
+        content: d.feedback || '',
+        ts: d.feedbackAt || d.submittedAt
+      });
+    });
+    dfSnap.forEach(function(ds) {
+      var d = ds.data();
+      allDocs.push({
+        label: '💌 코치 메시지',
+        content: d.feedback || '',
+        ts: d.createdAt
+      });
+    });
+    dfNameSnap.forEach(function(ds) {
+      var d = ds.data();
+      allDocs.push({
+        label: '💌 코치 메시지',
+        content: d.feedback || '',
+        ts: d.createdAt
+      });
+    });
+
+    if (allDocs.length === 0) {
       listEl.innerHTML = '<div class="feedback-card" style="text-align:center;color:var(--gray);font-size:.82rem;padding:1.2rem;">아직 받은 피드백이 없어요 🌱</div>';
       return;
     }
+
     // 최신순 정렬 후 최대 3건
-    var docs = [];
-    snap.forEach(function(ds) { docs.push(ds.data()); });
-    docs.sort(function(a, b) {
-      var ta = a.feedbackAt ? a.feedbackAt.seconds : (a.submittedAt ? a.submittedAt.seconds : 0);
-      var tb = b.feedbackAt ? b.feedbackAt.seconds : (b.submittedAt ? b.submittedAt.seconds : 0);
-      return tb - ta;
+    allDocs.sort(function(a, b) {
+      return (b.ts ? b.ts.seconds : 0) - (a.ts ? a.ts.seconds : 0);
     });
-    docs = docs.slice(0, 3);
+    allDocs = allDocs.slice(0, 3);
 
     var html = '';
-    docs.forEach(function(d) {
-      var ts = d.feedbackAt || d.submittedAt;
-      var timeStr = ts ? timeAgo(new Date(ts.seconds * 1000)) : '';
+    allDocs.forEach(function(d) {
+      var timeStr = d.ts ? timeAgo(new Date(d.ts.seconds * 1000)) : '';
       html += '<div class="feedback-card">'
-        + '<div class="fb-from">🌸 ' + (d.hwTitle || '과제') + ' 피드백</div>'
-        + '<div class="fb-content">' + (d.feedback || '') + '</div>'
+        + '<div class="fb-from">' + d.label + '</div>'
+        + '<div class="fb-content">' + d.content + '</div>'
         + '<div class="fb-time">' + timeStr + '</div>'
         + '</div>';
     });
@@ -2217,30 +2255,80 @@ async function loadCoachStudents() {
   }
 }
 
-// ── 코치: 특정 학생에게 직접 피드백 (별도 홈 피드백 컬렉션) ──
+// ── 코치: 목업 학생 피드백 (이름 기반) ──
+function openMockStudentFeedback(name) {
+  openDirectFeedbackModal(null, name);
+}
+
+// ── 코치: 실제 학생 피드백 (UID 기반) ──
 function openManualFeedbackForStudent(uid, name) {
+  openDirectFeedbackModal(uid, name);
+}
+
+// ── 공통: 직접 피드백 모달 ──
+async function openDirectFeedbackModal(uid, name) {
   document.getElementById('modalTitle').textContent = '✏️ ' + name + '님께 피드백';
+
+  // 기존 피드백 히스토리 미리 로드
+  var historyHtml = '<div style="font-size:.72rem;color:var(--gray);margin-bottom:.4rem;">이전 피드백</div>';
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var q;
+    if (uid) {
+      q = mod.query(mod.collection(window._db, 'directFeedbacks'),
+        mod.where('studentUid', '==', uid));
+    } else {
+      q = mod.query(mod.collection(window._db, 'directFeedbacks'),
+        mod.where('studentName', '==', name));
+    }
+    var snap = await mod.getDocs(q);
+    if (snap.empty) {
+      historyHtml += '<div style="font-size:.75rem;color:var(--gray);padding:.4rem 0;">아직 없어요</div>';
+    } else {
+      var items = [];
+      snap.forEach(function(ds) { items.push(ds.data()); });
+      items.sort(function(a, b) {
+        return (b.createdAt ? b.createdAt.seconds : 0) - (a.createdAt ? a.createdAt.seconds : 0);
+      });
+      items.slice(0, 3).forEach(function(d) {
+        var t = d.createdAt ? timeAgo(new Date(d.createdAt.seconds * 1000)) : '';
+        historyHtml += '<div style="background:var(--cream);border-radius:8px;padding:.5rem .8rem;margin-bottom:.4rem;">'
+          + '<div style="font-size:.72rem;color:var(--gray);">' + t + '</div>'
+          + '<div style="font-size:.8rem;line-height:1.6;">' + d.feedback + '</div>'
+          + '</div>';
+      });
+    }
+  } catch(e) { historyHtml = ''; }
+
   document.getElementById('modalBody').innerHTML = `
-    <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">학생 홈 화면 피드백 카드에 표시돼요</div>
-    <textarea id="directFbText" class="m-input" rows="5" placeholder="피드백을 남겨주세요..."></textarea>
-    <button class="m-btn" onclick="sendDirectFeedback('${uid}','${name}')">전송하기 →</button>`;
+    <div style="max-height:160px;overflow-y:auto;margin-bottom:.8rem;padding:.6rem;background:var(--warm);border-radius:10px;">${historyHtml}</div>
+    <div style="font-size:.72rem;color:var(--gray);margin-bottom:.4rem;">새 피드백 작성</div>
+    <textarea id="directFbText" class="m-input" rows="4" placeholder="피드백을 남겨주세요...&#10;학생 홈 화면에 바로 표시돼요"></textarea>
+    <button class="m-btn" id="directFbBtn" onclick="sendDirectFeedback('${uid||''}','${name}')">전송하기 →</button>`;
   document.getElementById('modalOverlay').classList.add('open');
 }
 
+// ── 직접 피드백 저장 ──
 async function sendDirectFeedback(uid, name) {
   var text = (document.getElementById('directFbText') || {}).value.trim();
   if (!text) { showToast('내용을 입력해주세요'); return; }
+  var btn = document.getElementById('directFbBtn');
+  if (btn) { btn.textContent = '전송 중...'; btn.disabled = true; }
   try {
     var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    await window._addDoc(window._collection(window._db, 'directFeedbacks'), {
-      studentUid: uid,
+    await mod.addDoc(mod.collection(window._db, 'directFeedbacks'), {
+      studentUid: uid || null,
       studentName: name,
       feedback: text,
       createdAt: mod.serverTimestamp()
     });
     closeModal();
     showToast('✅ ' + name + '님께 피드백을 전송했어요!');
-  } catch(err) { showToast('전송 실패'); console.error(err); }
+  } catch(err) {
+    showToast('전송 실패. 다시 시도해주세요.');
+    if (btn) { btn.textContent = '전송하기 →'; btn.disabled = false; }
+    console.error(err);
+  }
 }
 async function loadCoachEnrollments() {
   var listEl = document.getElementById('coach-enroll-list');
