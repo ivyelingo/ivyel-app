@@ -818,6 +818,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         window._currentUser = null;
         if (typeof _mySubUnsub === 'function') { _mySubUnsub(); _mySubUnsub = null; }
         if (typeof _communityUnsub === 'function') { _communityUnsub(); _communityUnsub = null; }
+        if (typeof _coachCommunityUnsub === 'function') { _coachCommunityUnsub(); _coachCommunityUnsub = null; }
         if (Array.isArray(_quickUnsubs)) { _quickUnsubs.forEach(function(fn){ fn(); }); _quickUnsubs = []; }
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('app').classList.remove('show');
@@ -1213,48 +1214,51 @@ textarea.m-input { min-height: 100px; resize: none; }
       <div class="sec-title" style="font-size:1.1rem;">학생 <em>목록</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">진도 & 출석 현황</div>
 
-      <!-- 목업 학생 (기존 유지) -->
-      <div class="student-card">
-        <div class="s-avatar" style="background:linear-gradient(135deg,var(--rose-light),var(--gold-light))">김</div>
-        <div class="s-info">
-          <div class="s-name">김지은</div>
-          <div class="s-class">성경영어 · 회화 1:1</div>
-          <div class="s-progress">
-            <div class="s-progress-text"><span>진도</span><span>75%</span></div>
-            <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
-          </div>
-        </div>
-        <button class="s-action" onclick="openMockStudentFeedback('김지은')">피드백</button>
+      <!-- 실제 가입 학생 (Firebase) - 최신 가입순 상단 -->
+      <div id="coach-student-list">
+        <div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">불러오는 중...</div>
       </div>
 
-      <div class="student-card">
-        <div class="s-avatar" style="background:linear-gradient(135deg,var(--sage-light),var(--gold-light))">박</div>
-        <div class="s-info">
-          <div class="s-name">박수연</div>
-          <div class="s-class">회화 1:1</div>
-          <div class="s-progress">
-            <div class="s-progress-text"><span>진도</span><span>50%</span></div>
-            <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+      <!-- 목업 학생 (하단 고정) -->
+      <div id="coach-mock-students">
+        <div style="font-size:.68rem;color:var(--gray);text-align:center;padding:.4rem 0 .6rem;letter-spacing:.05em;">— 기존 학생 —</div>
+        <div class="student-card">
+          <div class="s-avatar" style="background:linear-gradient(135deg,var(--rose-light),var(--gold-light))">김</div>
+          <div class="s-info">
+            <div class="s-name">김지은</div>
+            <div class="s-class">성경영어 · 회화 1:1</div>
+            <div class="s-progress">
+              <div class="s-progress-text"><span>진도</span><span>75%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
+            </div>
           </div>
+          <button class="s-action" onclick="openMockStudentFeedback('김지은')">피드백</button>
         </div>
-        <button class="s-action" onclick="openMockStudentFeedback('박수연')">피드백</button>
-      </div>
-
-      <div class="student-card">
-        <div class="s-avatar" style="background:linear-gradient(135deg,var(--gold-light),var(--rose-light))">이</div>
-        <div class="s-info">
-          <div class="s-name">이미경</div>
-          <div class="s-class">성경영어 · 글쓰기</div>
-          <div class="s-progress">
-            <div class="s-progress-text"><span>진도</span><span>90%</span></div>
-            <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
+        <div class="student-card">
+          <div class="s-avatar" style="background:linear-gradient(135deg,var(--sage-light),var(--gold-light))">박</div>
+          <div class="s-info">
+            <div class="s-name">박수연</div>
+            <div class="s-class">회화 1:1</div>
+            <div class="s-progress">
+              <div class="s-progress-text"><span>진도</span><span>50%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
+            </div>
           </div>
+          <button class="s-action" onclick="openMockStudentFeedback('박수연')">피드백</button>
         </div>
-        <button class="s-action" onclick="openMockStudentFeedback('이미경')">피드백</button>
+        <div class="student-card">
+          <div class="s-avatar" style="background:linear-gradient(135deg,var(--gold-light),var(--rose-light))">이</div>
+          <div class="s-info">
+            <div class="s-name">이미경</div>
+            <div class="s-class">성경영어 · 글쓰기</div>
+            <div class="s-progress">
+              <div class="s-progress-text"><span>진도</span><span>90%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:90%"></div></div>
+            </div>
+          </div>
+          <button class="s-action" onclick="openMockStudentFeedback('이미경')">피드백</button>
+        </div>
       </div>
-
-      <!-- 실제 가입 학생 (Firebase) -->
-      <div id="coach-student-list"></div>
 
       <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">제출된 <em>과제</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">학생 과제 확인 & AI 피드백</div>
@@ -1277,6 +1281,13 @@ textarea.m-input { min-height: 100px; resize: none; }
         <button onclick="manageApiKey()" style="width:100%;background:none;border:1.5px solid var(--light);border-radius:100px;padding:.6rem;font-size:.78rem;font-family:'DM Sans',sans-serif;cursor:pointer;color:var(--charcoal);" id="apiKeyStatusBtn">
           🔑 API 키 확인 중...
         </button>
+      </div>
+
+      <!-- 커뮤니티 새 글 -->
+      <div class="sec-title" style="font-size:1.1rem;margin-top:1.4rem;">커뮤니티 <em>새 글</em></div>
+      <div class="sec-sub" style="margin-bottom:.8rem;">학생들의 최근 게시글</div>
+      <div id="coach-community-list">
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
     </div>
 
@@ -1312,7 +1323,7 @@ textarea.m-input { min-height: 100px; resize: none; }
       </div>
 
       <div class="profile-list">
-        <div class="profile-item" onclick="window.location.href='ivyel-learn.html'">
+        <div class="profile-item" onclick="openMyMaterials()">
           <span class="pi-icon">📚</span>
           <span class="pi-label">내 학습 자료</span>
           <span class="pi-arrow">›</span>
@@ -1503,13 +1514,14 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachCommunity(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     setTimeout(loadCoachSubmissions, 500);
     setTimeout(loadCoachEnrollments, 600);
     setTimeout(loadCoachStudents, 700);
-    setTimeout(updateApiKeyStatus, 800);
+    setTimeout(loadCoachCommunity, 800);
+    setTimeout(updateApiKeyStatus, 900);
   } else {
     // 학생: 이미 제출한 과제는 완료 상태로 표시
     setTimeout(restoreSubmittedStatus, 500);
@@ -2162,97 +2174,182 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ── 코치: 실제 가입 학생 목록 로드 ──
+// ── 코치: 실제 가입 학생 목록 로드 (최신 가입순 상단) ──
 async function loadCoachStudents() {
   var listEl = document.getElementById('coach-student-list');
   if (!listEl) return;
   try {
     var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-
-    // users 컬렉션에서 student 역할만
     var snap = await mod.getDocs(mod.query(
       mod.collection(window._db, 'users'),
       mod.where('role', '==', 'student')
     ));
-
     if (snap.empty) { listEl.innerHTML = ''; return; }
 
-    // 각 학생의 제출 과제 수 & 수강 중인 수업도 가져오기
     var students = [];
     snap.forEach(function(ds) { students.push({ uid: ds.id, data: ds.data() }); });
+    // 최신 가입순 (내림차순)
     students.sort(function(a, b) {
-      var ta = a.data.createdAt ? a.data.createdAt.seconds : 0;
-      var tb = b.data.createdAt ? b.data.createdAt.seconds : 0;
-      return ta - tb; // 가입 순
+      return (b.data.createdAt ? b.data.createdAt.seconds : 0)
+           - (a.data.createdAt ? a.data.createdAt.seconds : 0);
     });
 
-    // 각 학생별 제출 수 & 수강 수업 병렬 조회
     var avatarColors = [
-      'linear-gradient(135deg,var(--rose-light),var(--gold-light))',
       'linear-gradient(135deg,var(--sage-light),var(--gold-light))',
-      'linear-gradient(135deg,var(--gold-light),var(--rose-light))',
-      'linear-gradient(135deg,var(--cream),var(--sage-light))'
+      'linear-gradient(135deg,var(--rose-light),var(--gold-light))',
+      'linear-gradient(135deg,var(--gold-light),var(--sage-light))',
+      'linear-gradient(135deg,var(--cream),var(--rose-light))'
     ];
 
     var html = '';
     for (var i = 0; i < students.length; i++) {
-      var s = students[i];
-      var d = s.data;
+      var s = students[i]; var d = s.data;
       var color = avatarColors[i % avatarColors.length];
       var initial = (d.name || '?').charAt(0);
 
-      // 수강 중인 수업 조회
       var enrollSnap = await mod.getDocs(mod.query(
         mod.collection(window._db, 'enrollments'),
         mod.where('studentUid', '==', s.uid),
         mod.where('status', '==', 'confirmed')
       ));
-      var enrollPendingSnap = await mod.getDocs(mod.query(
+      var pendingSnap = await mod.getDocs(mod.query(
         mod.collection(window._db, 'enrollments'),
         mod.where('studentUid', '==', s.uid),
         mod.where('status', '==', 'pending')
       ));
-
-      // 제출한 과제 수
       var hwSnap = await mod.getDocs(mod.query(
         mod.collection(window._db, 'homework'),
         mod.where('studentUid', '==', s.uid)
       ));
 
-      var confirmedClasses = [];
-      enrollSnap.forEach(function(e) { confirmedClasses.push(e.data().className); });
-      var pendingCount = enrollPendingSnap.size;
-      var hwCount = hwSnap.size;
-
-      var classLabel = confirmedClasses.length > 0
-        ? confirmedClasses.join(' · ')
-        : (pendingCount > 0 ? '⏳ 신청 대기 ' + pendingCount + '개' : '수강 수업 없음');
-
+      var classes = [];
+      enrollSnap.forEach(function(e) { classes.push(e.data().className); });
+      var classLabel = classes.length > 0 ? classes.join(' · ')
+        : (pendingSnap.size > 0 ? '⏳ 신청 대기 ' + pendingSnap.size + '개' : '수강 수업 없음');
       var joinDate = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('ko-KR') : '';
 
       html += '<div class="student-card">'
         + '<div class="s-avatar" style="background:' + color + '">' + initial + '</div>'
         + '<div class="s-info">'
-        + '<div class="s-name">' + (d.name || '이름 없음') + '</div>'
+        + '<div class="s-name">' + (d.name||'이름 없음')
+        + '<span style="font-size:.62rem;color:var(--sage);background:var(--sage-light);border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">신규</span></div>'
         + '<div class="s-class">' + classLabel + '</div>'
-        + '<div class="s-progress">'
-        + '<div class="s-progress-text"><span>제출 과제</span><span>' + hwCount + '개</span></div>'
-        + '<div style="font-size:.68rem;color:var(--gray);">가입일 ' + joinDate + '</div>'
-        + '</div>'
+        + '<div class="s-progress"><div class="s-progress-text"><span>제출 과제 ' + hwSnap.size + '개</span><span style="font-size:.65rem;color:var(--gray);">가입 ' + joinDate + '</span></div></div>'
         + '</div>'
         + '<button class="s-action" onclick="openManualFeedbackForStudent(\'' + s.uid + '\',\'' + (d.name||'') + '\')">피드백</button>'
         + '</div>';
     }
 
-    // 총 학생 수 업데이트
+    // 상단 통계 업데이트
     var statEls = document.querySelectorAll('.cs-num');
-    if (statEls[0]) statEls[0].textContent = 3 + students.length; // 목업 3 + 실제
+    if (statEls[0]) statEls[0].textContent = 3 + students.length;
+    listEl.innerHTML = html;
+  } catch(err) { console.error(err); listEl.innerHTML = ''; }
+}
 
-    listEl.innerHTML = html || '';
+// ── 내 정보: 학습 자료 (수강 확정 수업 기반) ──
+async function openMyMaterials() {
+  document.getElementById('modalTitle').textContent = '📚 내 학습 자료';
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  try {
+    var user = window._currentUser;
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'enrollments'),
+      mod.where('studentUid', '==', user.uid)
+    ));
+
+    if (snap.empty) {
+      document.getElementById('modalBody').innerHTML = `
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">
+          아직 수강 중인 수업이 없어요 🌱<br>
+          <span style="font-size:.78rem;">수업을 신청하면 자료가 여기에 표시돼요</span>
+        </div>`;
+      return;
+    }
+
+    // 수업별 자료 목록
+    var materialMap = {
+      'writing':  { emoji:'✍️', items:['영어 글쓰기 워크시트 1-4주차', '에세이 구조 가이드 PDF', '일기 쓰기 템플릿', '교정 예시 모음'] },
+      'coaching': { emoji:'🌱', items:['자신감 빌딩 워크북', '학습 목표 설정 시트', '1:1 코칭 피드백 기록지'] },
+      'kids':     { emoji:'🌿', items:['파닉스 워크시트', '영어 동요 가사집', '스티커 보상표', '학부모 가이드'] },
+      'bible':    { emoji:'📖', items:['John 3장 영어 본문', '말씀 필사 노트', '성경영어 단어장'] },
+      'speaking': { emoji:'💬', items:['회화 표현 100선', '발음 교정 가이드', '대화 스크립트 모음'] }
+    };
+
+    var html = '';
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      var isPending = d.status === 'pending';
+      var info = materialMap[d.classKey] || { emoji:'📄', items:['수업 자료'] };
+      var statusBadge = isPending
+        ? '<span style="font-size:.65rem;background:var(--gold-light);color:#8a6a30;border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">신청 대기 중</span>'
+        : '<span style="font-size:.65rem;background:var(--sage-light);color:var(--sage);border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">수강 중</span>';
+
+      html += '<div style="margin-bottom:1rem;">'
+        + '<div style="font-size:.88rem;font-weight:600;margin-bottom:.5rem;">' + info.emoji + ' ' + d.className + statusBadge + '</div>';
+
+      if (isPending) {
+        html += '<div style="font-size:.78rem;color:var(--gray);padding:.5rem;background:var(--cream);border-radius:8px;">수강 확정 후 자료가 공개돼요 🔒</div>';
+      } else {
+        info.items.forEach(function(item) {
+          html += '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .2rem;border-bottom:1px solid var(--light);">'
+            + '<span style="font-size:.9rem;">📄</span>'
+            + '<span style="font-size:.82rem;flex:1;">' + item + '</span>'
+            + '<span style="font-size:.72rem;color:var(--rose);cursor:pointer;" onclick="showToast(\'준비 중이에요 💌\')">보기</span>'
+            + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+
+    document.getElementById('modalBody').innerHTML = html;
   } catch(err) {
+    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
     console.error(err);
-    listEl.innerHTML = '';
   }
+}
+
+// ── 코치: 커뮤니티 새 글 실시간 ──
+var _coachCommunityUnsub = null;
+async function loadCoachCommunity() {
+  var listEl = document.getElementById('coach-community-list');
+  if (!listEl) return;
+  if (_coachCommunityUnsub) { _coachCommunityUnsub(); _coachCommunityUnsub = null; }
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    _coachCommunityUnsub = mod.onSnapshot(mod.collection(window._db, 'posts'), function(snap) {
+      if (snap.empty) {
+        listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">아직 게시글이 없어요</div>';
+        return;
+      }
+      var docs = [];
+      snap.forEach(function(ds) { docs.push(ds.data()); });
+      docs.sort(function(a, b) {
+        return (b.createdAt ? b.createdAt.seconds : 0) - (a.createdAt ? a.createdAt.seconds : 0);
+      });
+      var categoryEmoji = { '성경영어':'📖','회화':'💬','일반':'🌱','질문':'❓' };
+      var html = '';
+      docs.forEach(function(d) {
+        var t = d.createdAt ? timeAgo(new Date(d.createdAt.seconds * 1000)) : '방금 전';
+        var emoji = categoryEmoji[d.category] || '🌱';
+        html += '<div class="post-card" style="margin-bottom:.6rem;">'
+          + '<div class="post-top">'
+          + '<div class="post-avatar" style="background:linear-gradient(135deg,var(--rose-light),var(--gold-light));width:28px;height:28px;font-size:.75rem;">' + (d.authorName||'?').charAt(0) + '</div>'
+          + '<div><div class="post-user" style="font-size:.82rem;">' + (d.authorName||'익명') + '</div></div>'
+          + '<span class="post-badge-tag" style="font-size:.65rem;">' + emoji + ' ' + (d.category||'') + '</span>'
+          + '<div class="post-time">' + t + '</div>'
+          + '</div>'
+          + '<div class="post-content" style="font-size:.82rem;">' + d.content + '</div>'
+          + '<div style="font-size:.72rem;color:var(--gray);margin-top:.3rem;">❤️ ' + (d.likes||0) + '</div>'
+          + '</div>';
+      });
+      listEl.innerHTML = html;
+    });
+  } catch(err) { console.error(err); }
 }
 
 // ── 코치: 목업 학생 피드백 (이름 기반) ──
