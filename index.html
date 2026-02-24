@@ -819,6 +819,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         if (typeof _mySubUnsub === 'function') { _mySubUnsub(); _mySubUnsub = null; }
         if (typeof _communityUnsub === 'function') { _communityUnsub(); _communityUnsub = null; }
         if (typeof _coachCommunityUnsub === 'function') { _coachCommunityUnsub(); _coachCommunityUnsub = null; }
+        if (typeof _assignedHwUnsub === 'function') { _assignedHwUnsub(); _assignedHwUnsub = null; }
         if (Array.isArray(_quickUnsubs)) { _quickUnsubs.forEach(function(fn){ fn(); }); _quickUnsubs = []; }
         // 커뮤니티 글쓰기 박스 리셋
         var ca = document.getElementById('communityAvatar');
@@ -1030,7 +1031,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:75%"></div></div>
         <div style="font-size:0.68rem; color:var(--gray); margin:0.3rem 0 0.8rem;">진도 75% — 12/16 완료</div>
-        <button class="cc-btn enrolled-btn">✓ 수강 중 · 자료 보기</button>
+        <button class="cc-btn enrolled-btn" onclick="openClassMaterials('bible','성경영어 소그룹')">✓ 수강 중 · 자료 보기</button>
       </div>
 
       <div class="class-card" data-type="speaking" id="cc-speaking">
@@ -1047,7 +1048,7 @@ textarea.m-input { min-height: 100px; resize: none; }
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:50%"></div></div>
         <div style="font-size:0.68rem; color:var(--gray); margin:0.3rem 0 0.8rem;">진도 50% — 8/16 완료</div>
-        <button class="cc-btn enrolled-btn">✓ 수강 중 · 자료 보기</button>
+        <button class="cc-btn enrolled-btn" onclick="openClassMaterials('speaking','영어 회화 1:1')">✓ 수강 중 · 자료 보기</button>
       </div>
 
       <div class="class-card" data-type="writing" id="cc-writing">
@@ -1109,26 +1110,31 @@ textarea.m-input { min-height: 100px; resize: none; }
 
       <!-- 미제출 과제 -->
       <div id="hw-pending-section">
-        <div class="hw-card" data-hw="pending">
-          <div class="hw-top">
-            <div class="hw-class">📖 성경영어</div>
-            <span class="hw-status pending">미제출</span>
-          </div>
-          <div class="hw-title">John 3장 영어로 필사하기</div>
-          <div class="hw-desc">요한복음 3장을 영어 성경으로 읽고, 마음에 닿는 구절 3개를 영어로 필사해주세요.</div>
-          <div class="hw-due">마감 <span>내일 오전 9:00</span></div>
-          <button class="hw-submit-btn" onclick="openSubmitModal('John 3장 필사')">📎 제출하기</button>
-        </div>
+        <!-- 코치가 Firebase에서 낸 숙제 (실시간) -->
+        <div id="hw-assigned-list"></div>
 
-        <div class="hw-card" data-hw="pending">
-          <div class="hw-top">
-            <div class="hw-class">💬 영어 회화</div>
-            <span class="hw-status pending">미제출</span>
+        <!-- 목업 숙제 (기존 유지) -->
+        <div id="hw-mock-list">
+          <div class="hw-card" data-hw="pending">
+            <div class="hw-top">
+              <div class="hw-class">📖 성경영어</div>
+              <span class="hw-status pending">미제출</span>
+            </div>
+            <div class="hw-title">John 3장 영어로 필사하기</div>
+            <div class="hw-desc">요한복음 3장을 영어 성경으로 읽고, 마음에 닿는 구절 3개를 영어로 필사해주세요.</div>
+            <div class="hw-due">마감 <span>내일 오전 9:00</span></div>
+            <button class="hw-submit-btn" onclick="openSubmitModal('John 3장 필사')">📎 제출하기</button>
           </div>
-          <div class="hw-title">자기소개 영어로 녹음하기</div>
-          <div class="hw-desc">1분 분량의 자기소개를 영어로 녹음해서 제출해주세요. 틀려도 괜찮아요!</div>
-          <div class="hw-due">마감 <span>이번 주 금요일</span></div>
-          <button class="hw-submit-btn" onclick="openSubmitModal('자기소개 녹음')">🎤 제출하기</button>
+          <div class="hw-card" data-hw="pending">
+            <div class="hw-top">
+              <div class="hw-class">💬 영어 회화</div>
+              <span class="hw-status pending">미제출</span>
+            </div>
+            <div class="hw-title">자기소개 영어로 녹음하기</div>
+            <div class="hw-desc">1분 분량의 자기소개를 영어로 녹음해서 제출해주세요. 틀려도 괜찮아요!</div>
+            <div class="hw-due">마감 <span>이번 주 금요일</span></div>
+            <button class="hw-submit-btn" onclick="openSubmitModal('자기소개 녹음')">🎤 제출하기</button>
+          </div>
         </div>
       </div>
 
@@ -1268,7 +1274,11 @@ textarea.m-input { min-height: 100px; resize: none; }
         </div>
       </div>
 
-      <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">제출된 <em>과제</em></div>
+      <div class="sec-title" style="font-size:1.1rem; margin-top:0.5rem;">숙제 <em>내주기</em></div>
+      <div class="sec-sub" style="margin-bottom:0.8rem;">전체·수업별·개인 숙제 발송</div>
+      <button onclick="openAssignHwModal()" style="width:100%;background:linear-gradient(135deg,var(--charcoal),#3a3a3a);color:var(--cream);border:none;border-radius:14px;padding:.85rem;font-size:.88rem;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:1.2rem;">✏️ 새 숙제 만들기</button>
+
+      <div class="sec-title" style="font-size:1.1rem;">제출된 <em>과제</em></div>
       <div class="sec-sub" style="margin-bottom:0.8rem;">학생 과제 확인 & AI 피드백</div>
 
       <!-- 실시간 제출 목록 -->
@@ -1539,6 +1549,7 @@ function showAppAfterLogin(userData) {
     setTimeout(loadCommunityPosts, 700);
     setTimeout(loadQuickStats, 800);
     setTimeout(restoreEnrollments, 900);
+    setTimeout(loadAssignedHomework, 1000);
     // 커뮤니티 글쓰기 아바타 이니셜 동기화
     var ca = document.getElementById('communityAvatar');
     var wb = document.getElementById('communityWriteBox');
@@ -1919,6 +1930,163 @@ async function loadMySubmissions() {
   }
 }
 
+// ── 수업 자료 보기 모달 ──
+var materialMap = {
+  'bible':    { emoji:'📖', name:'성경영어 소그룹',  items:['John 3장 영어 본문 PDF','말씀 필사 노트 양식','성경영어 핵심 단어장 50선','이번 주 예습 자료'] },
+  'speaking': { emoji:'💬', name:'영어 회화 1:1',    items:['회화 표현 100선 PDF','발음 교정 가이드','이번 주 대화 스크립트','셀프 체크리스트'] },
+  'writing':  { emoji:'✍️', name:'영어 글쓰기 과정', items:['글쓰기 워크시트 1-4주차','에세이 구조 가이드','일기 쓰기 템플릿','교정 예시 모음'] },
+  'coaching': { emoji:'🌱', name:'영어 코칭',        items:['자신감 빌딩 워크북','학습 목표 설정 시트','1:1 코칭 기록지'] },
+  'kids':     { emoji:'🌿', name:'키즈 영어',        items:['파닉스 워크시트','영어 동요 가사집','스티커 보상표','학부모 가이드'] }
+};
+
+function openClassMaterials(classKey, className) {
+  var info = materialMap[classKey] || { emoji:'📄', name: className, items:[] };
+  document.getElementById('modalTitle').textContent = info.emoji + ' ' + info.name + ' 자료';
+  var itemsHtml = info.items.map(function(item) {
+    return '<div style="display:flex;align-items:center;gap:.7rem;padding:.65rem .2rem;border-bottom:1px solid var(--light);">'
+      + '<span style="font-size:1rem;">📄</span>'
+      + '<span style="font-size:.84rem;flex:1;">' + item + '</span>'
+      + '<span style="font-size:.72rem;color:var(--rose);cursor:pointer;" onclick="showToast(\'준비 중이에요 💌\')">보기</span>'
+      + '</div>';
+  }).join('');
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:var(--cream);border-radius:10px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--gray);">
+      수강 중인 수업의 자료예요. 코치님이 업로드한 순서로 표시돼요.
+    </div>
+    ${itemsHtml}`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 코치: 숙제 내주기 모달 ──
+async function openAssignHwModal() {
+  // 실제 학생 목록 로드
+  var studentOptions = '<option value="all">📢 전체 학생</option>';
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(mod.collection(window._db,'users'), mod.where('role','==','student')));
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      studentOptions += '<option value="' + ds.id + '">' + (d.name||'이름없음') + ' (' + (d.email||'') + ')</option>';
+    });
+  } catch(e) {}
+
+  document.getElementById('modalTitle').textContent = '✏️ 새 숙제 만들기';
+  document.getElementById('modalBody').innerHTML = `
+    <select class="m-input" id="hwTarget">${studentOptions}</select>
+    <select class="m-input" id="hwClass">
+      <option value="성경영어">📖 성경영어반</option>
+      <option value="회화">💬 영어 회화반</option>
+      <option value="글쓰기">✍️ 글쓰기반</option>
+      <option value="코칭">🌱 코칭반</option>
+      <option value="키즈">🌿 키즈반</option>
+      <option value="전체">📢 전체 공통</option>
+    </select>
+    <input class="m-input" id="hwTitleInput" placeholder="숙제 제목 (예: John 4장 필사하기)">
+    <textarea class="m-input" id="hwDescInput" rows="3" placeholder="숙제 설명 (선택)"></textarea>
+    <input class="m-input" id="hwDueInput" type="date" placeholder="마감일">
+    <button class="m-btn" id="assignHwBtn" onclick="submitAssignHw()">숙제 발송하기 →</button>`;
+  // 날짜 기본값 (7일 후)
+  var d = new Date(); d.setDate(d.getDate()+7);
+  document.getElementById('hwDueInput').value = d.toISOString().split('T')[0];
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 코치: 숙제 Firebase 저장 ──
+async function submitAssignHw() {
+  var title = (document.getElementById('hwTitleInput')||{}).value.trim();
+  if (!title) { showToast('숙제 제목을 입력해주세요'); return; }
+  var target  = document.getElementById('hwTarget').value;
+  var cls     = document.getElementById('hwClass').value;
+  var desc    = (document.getElementById('hwDescInput')||{}).value.trim();
+  var dueVal  = (document.getElementById('hwDueInput')||{}).value;
+  var btn     = document.getElementById('assignHwBtn');
+  btn.textContent = '발송 중...'; btn.disabled = true;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.addDoc(mod.collection(window._db, 'assignments'), {
+      title: title,
+      desc: desc,
+      className: cls,
+      target: target,           // 'all' 또는 특정 studentUid
+      dueDate: dueVal,
+      createdAt: mod.serverTimestamp(),
+      createdBy: window._currentUser.uid
+    });
+    closeModal();
+    showToast('✅ 숙제를 발송했어요!');
+  } catch(err) {
+    showToast('발송 실패. 다시 시도해주세요.');
+    btn.textContent = '숙제 발송하기 →'; btn.disabled = false;
+    console.error(err);
+  }
+}
+
+// ── 학생: 코치가 낸 숙제 실시간 로드 ──
+var _assignedHwUnsub = null;
+async function loadAssignedHomework() {
+  var listEl = document.getElementById('hw-assigned-list');
+  if (!listEl) return;
+  if (_assignedHwUnsub) { _assignedHwUnsub(); _assignedHwUnsub = null; }
+  try {
+    var user = window._currentUser;
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    // 전체 대상 or 나에게만 보낸 숙제 모두 가져오기
+    var qAll = mod.query(mod.collection(window._db,'assignments'), mod.where('target','==','all'));
+    var qMe  = mod.query(mod.collection(window._db,'assignments'), mod.where('target','==', user.uid));
+
+    var classEmoji = { '성경영어':'📖','회화':'💬','글쓰기':'✍️','코칭':'🌱','키즈':'🌿','전체':'📢' };
+
+    async function render() {
+      var [snapAll, snapMe] = await Promise.all([mod.getDocs(qAll), mod.getDocs(qMe)]);
+      var docs = [];
+      snapAll.forEach(function(ds){ docs.push({id:ds.id, data:ds.data()}); });
+      snapMe.forEach(function(ds){ docs.push({id:ds.id, data:ds.data()}); });
+      // 이미 제출한 것 필터
+      var submittedSnap = await mod.getDocs(mod.query(
+        mod.collection(window._db,'homework'), mod.where('studentUid','==',user.uid)
+      ));
+      var submittedTitles = new Set();
+      submittedSnap.forEach(function(ds){ submittedTitles.add(ds.data().hwTitle); });
+
+      docs.sort(function(a,b){
+        return (b.data.createdAt?b.data.createdAt.seconds:0)-(a.data.createdAt?a.data.createdAt.seconds:0);
+      });
+
+      if (docs.length === 0) { listEl.innerHTML = ''; updatePendingBadge(); return; }
+
+      var html = '';
+      docs.forEach(function(item) {
+        var d = item.data;
+        var isDone = submittedTitles.has(d.title);
+        var emoji = classEmoji[d.className] || '📝';
+        var dueStr = d.dueDate ? '마감 <span>' + d.dueDate + '</span>' : '';
+        html += '<div class="hw-card" data-hw="' + (isDone?'done':'pending') + '" data-assigned="' + item.id + '">'
+          + '<div class="hw-top"><div class="hw-class">' + emoji + ' ' + d.className + '</div>'
+          + '<span class="hw-status ' + (isDone?'done':'pending') + '">' + (isDone?'✓ 제출 완료':'미제출') + '</span></div>'
+          + '<div class="hw-title">' + d.title + '</div>'
+          + (d.desc ? '<div class="hw-desc">' + d.desc + '</div>' : '')
+          + (dueStr ? '<div class="hw-due">' + dueStr + '</div>' : '')
+          + (isDone
+            ? '<button class="hw-submit-btn done-btn" disabled>✓ 제출 완료</button>'
+            : '<button class="hw-submit-btn" onclick="openSubmitModal(\'' + d.title.replace(/'/g,"\\'") + '\')">📎 제출하기</button>')
+          + '</div>';
+      });
+      listEl.innerHTML = html;
+      updatePendingBadge();
+    }
+
+    await render();
+    // 실시간 업데이트 (새 숙제 추가 시)
+    _assignedHwUnsub = mod.onSnapshot(qAll, function(){ render(); });
+  } catch(err) { console.error(err); }
+}
+
+function updatePendingBadge() {
+  var pending = document.querySelectorAll('#hw-pending-section .hw-card[data-hw="pending"]').length;
+  var badge = document.getElementById('pendingBadge');
+  if (badge) badge.textContent = pending;
+}
+
 // ── 수강 신청 모달 ──
 function openEnrollModal(classKey, className) {
   document.getElementById('modalTitle').textContent = '📋 수강 신청';
@@ -2004,7 +2172,7 @@ function applyEnrollStyle(classKey, status) {
     btn.textContent = '✓ 수강 확정 · 자료 보기';
     btn.className = 'cc-btn enrolled-btn';
     btn.style.cssText = '';
-    btn.onclick = null;
+    btn.onclick = function() { openClassMaterials(classKey, (materialMap[classKey]||{}).name || classKey); };
   }
 }
 
@@ -2047,6 +2215,9 @@ async function submitHomework(hwTitle) {
     });
     closeModal();
     showToast('✅ 제출 완료! 제출 완료 탭에서 확인하세요 💌');
+
+    // 코치가 낸 숙제 목록 상태 갱신
+    if (typeof loadAssignedHomework === 'function') loadAssignedHomework();
 
     // 해당 카드를 제출 완료 상태로 업데이트
     document.querySelectorAll('.hw-card[data-hw="pending"]').forEach(function(card) {
