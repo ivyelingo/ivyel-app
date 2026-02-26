@@ -828,6 +828,9 @@ textarea.m-input { min-height: 100px; resize: none; }
         if (ca) { ca.textContent = '?'; ca.style.background = ''; ca.style.color = ''; }
         if (ct) ct.textContent = '오늘의 영어 한마디를 나눠보세요... ✍️';
         if (wb) wb.style.borderColor = '';
+        // 하단바 숙제 배지 리셋
+        var navBadge = document.getElementById('navHwBadge');
+        if (navBadge) { navBadge.textContent = '0'; navBadge.style.display = 'none'; }
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('app').classList.remove('show');
         // 숙제 탭/섹션 초기화
@@ -1367,7 +1370,7 @@ textarea.m-input { min-height: 100px; resize: none; }
     </button>
     <button class="nav-item" onclick="switchPage('homework', this)">
       <span class="nav-icon">📝</span>
-      <span class="nav-label">숙제<span class="badge">2</span></span>
+      <span class="nav-label">숙제<span class="badge" id="navHwBadge">0</span></span>
     </button>
     <button class="nav-item" onclick="switchPage('community', this)">
       <span class="nav-icon">💬</span>
@@ -2122,8 +2125,13 @@ async function loadAssignedHomework() {
 
 function updatePendingBadge() {
   var pending = document.querySelectorAll('#hw-pending-section .hw-card[data-hw="pending"]').length;
-  var badge = document.getElementById('pendingBadge');
-  if (badge) badge.textContent = pending;
+  var tabBadge = document.getElementById('pendingBadge');
+  var navBadge = document.getElementById('navHwBadge');
+  if (tabBadge) tabBadge.textContent = pending;
+  if (navBadge) {
+    navBadge.textContent = pending;
+    navBadge.style.display = pending > 0 ? 'inline' : 'none';
+  }
 }
 
 // ── 수강 신청 모달 ──
@@ -2299,6 +2307,7 @@ async function submitHomework(hwTitle) {
     var remaining = document.querySelectorAll('.hw-card[data-hw="pending"]').length;
     var pendingBadge = document.getElementById('pendingBadge');
     if (pendingBadge) pendingBadge.textContent = remaining;
+    updatePendingBadge();
   } catch(err) {
     console.error('제출 에러:', err);
     showToast('제출에 실패했어요. 다시 시도해주세요.');
