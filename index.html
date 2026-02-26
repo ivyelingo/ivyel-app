@@ -2555,9 +2555,8 @@ async function openMyMaterials() {
         + startInfo;
 
       if (status === 'active') {
-        // 수강 중 → Firebase 실제 자료 링크로 열기
         html += '<div style="font-size:.75rem;color:var(--gray);margin-bottom:.4rem;">수업 자료를 눌러 바로 열어보세요</div>'
-          + '<button onclick="openClassMaterials(\'' + d.classKey + '\',\'' + d.className + '\')" style="width:100%;background:var(--sage-light);color:var(--sage);border:none;border-radius:10px;padding:.6rem;font-size:.8rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">📂 자료 보기</button>';
+          + '<button class="mat-open-btn" data-classkey="' + d.classKey + '" data-classname="' + d.className + '" style="width:100%;background:var(--sage-light);color:var(--sage);border:none;border-radius:10px;padding:.6rem;font-size:.8rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">📂 자료 보기</button>';
       } else if (status === 'confirmed') {
         html += '<div style="font-size:.78rem;color:#5a9a60;padding:.5rem;background:#e8f4e8;border-radius:8px;">수업 시작일에 자료가 공개돼요 📅</div>';
       } else {
@@ -2567,6 +2566,14 @@ async function openMyMaterials() {
     });
 
     document.getElementById('modalBody').innerHTML = html;
+
+    // data 속성으로 안전하게 이벤트 바인딩 (onclick 문자열 파싱 오류 방지)
+    document.querySelectorAll('.mat-open-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        openClassMaterials(this.dataset.classkey, this.dataset.classname);
+      });
+    });
+
   } catch(err) {
     document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
     console.error(err);
