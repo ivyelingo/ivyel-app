@@ -1155,8 +1155,8 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="post-content">"For God so loved the world" — 오늘 이 구절이 너무 마음에 와닿았어요. 영어로 읽으니까 또 다른 감동이 있네요 🙏</div>
           <div class="post-actions">
             <div class="post-action" onclick="showToast('❤️ 좋아요!')">❤️ 12</div>
-            <div class="post-action">💬 댓글 3</div>
-            <div class="post-action">🔖 저장</div>
+            <div class="post-action" onclick="showToast('댓글 기능은 준비 중이에요 💬')">💬 댓글 3</div>
+            <div class="post-action" onclick="showToast('저장 기능은 준비 중이에요 🔖')">🔖 저장</div>
           </div>
         </div>
 
@@ -1170,8 +1170,8 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="post-content">드디어 자기소개 숙제 제출했어요! 🎉 처음엔 너무 떨렸는데 막상 하고나니 뿌듯하네요. 다들 화이팅!!</div>
           <div class="post-actions">
             <div class="post-action" onclick="showToast('❤️ 좋아요!')">❤️ 8</div>
-            <div class="post-action">💬 댓글 5</div>
-            <div class="post-action">🔖 저장</div>
+            <div class="post-action" onclick="showToast('댓글 기능은 준비 중이에요 💬')">💬 댓글 5</div>
+            <div class="post-action" onclick="showToast('저장 기능은 준비 중이에요 🔖')">🔖 저장</div>
           </div>
         </div>
 
@@ -1184,7 +1184,7 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="post-content">이번 주 수업 정말 모두 수고 많았어요! 특히 자기소개 녹음 과제 많이들 올려주셨는데 하나하나 다 들었어요 💕 다음 주에도 함께 성장해요!</div>
           <div class="post-actions">
             <div class="post-action" onclick="showToast('❤️ 좋아요!')">❤️ 24</div>
-            <div class="post-action">💬 댓글 11</div>
+            <div class="post-action" onclick="showToast('댓글 기능은 준비 중이에요 💬')">💬 댓글 11</div>
           </div>
         </div>
       </div>
@@ -1620,6 +1620,7 @@ async function loadCommunityPosts() {
           + '<div class="post-content">' + d.content + '</div>'
           + '<div class="post-actions">'
           + '<div class="post-action" onclick="likePost(\'' + item.id + '\', this)">❤️ ' + (d.likes || 0) + '</div>'
+          + '<div class="post-action" onclick="showToast(\'댓글 기능은 준비 중이에요 💬\')">💬 댓글</div>'
           + '</div>'
           + '</div>';
       });
