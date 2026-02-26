@@ -2699,23 +2699,82 @@ async function loadCoachEnrollments() {
     docs.forEach(function(item) {
       var d = item.data; var docId = item.id;
       var isPending = d.status === 'pending';
+      var isActive  = d.status === 'active';
       var date = d.appliedAt ? new Date(d.appliedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var statusLabel = isPending ? '⏳ 대기 중' : (isActive ? '🎓 수강 중' : '✓ 확정');
+      var statusClass = isPending ? 'pending' : 'done';
+
+      // 시작일 표시 행
+      var startRow = '';
+      if (!isPending) {
+        var startStr = d.startDate || '미지정';
+        startRow = '<div style="display:flex;align-items:center;gap:.5rem;margin:.4rem 0;">'
+          + '<span style="font-size:.78rem;color:var(--gray);">📅 수업 시작일: <b>' + startStr + '</b></span>'
+          + '<button onclick="openEditStartDateModal(\'' + docId + '\',\'' + startStr + '\')" '
+          + 'style="font-size:.65rem;background:none;border:1px solid var(--light);border-radius:20px;padding:.15rem .5rem;cursor:pointer;color:var(--gray);">수정</button>'
+          + '</div>';
+      }
+
       html += '<div class="hw-card">'
         + '<div class="hw-top">'
         + '<div class="hw-class">🎓 ' + (d.studentName || '학생') + '</div>'
-        + '<span class="hw-status ' + (isPending ? 'pending' : 'done') + '">' + (isPending ? '⏳ 대기 중' : '✓ 확정') + '</span>'
+        + '<span class="hw-status ' + statusClass + '">' + statusLabel + '</span>'
         + '</div>'
         + '<div class="hw-title" style="font-size:.92rem;">' + (d.className || '') + '</div>'
         + '<div style="font-size:.78rem;color:var(--gray);margin:.3rem 0;">📱 ' + (d.mode || '') + (d.phone ? ' · ' + d.phone : '') + ' · ' + date + '</div>'
+        + startRow
         + (d.note ? '<div style="font-size:.78rem;background:var(--cream);border-radius:8px;padding:.4rem .7rem;margin:.3rem 0;">' + d.note + '</div>' : '')
         + (isPending
           ? '<button onclick="openConfirmEnrollModal(\'' + docId + '\',\'' + (d.studentName||'') + '\',\'' + (d.className||'') + '\',\'' + (d.classKey||'') + '\')" style="width:100%;margin-top:.6rem;background:linear-gradient(135deg,var(--sage),#5a9a60);color:white;border:none;border-radius:100px;padding:.55rem;font-size:.78rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✓ 수강 확정하기</button>'
-          : '<div style="font-size:.75rem;color:var(--sage);text-align:center;margin-top:.5rem;font-weight:600;">' + (d.status === 'active' ? '🎓 수강 중' : '✓ 수강 확정 완료 · ' + (d.startDate||'시작일 미정')) + '</div>')
+          : '')
         + '</div>';
     });
     listEl.innerHTML = html;
   } catch(err) {
     listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+// ── 코치: 수업 시작일 수정 모달 ──
+function openEditStartDateModal(docId, currentDate) {
+  var today = new Date().toISOString().split('T')[0];
+  var val = (currentDate === '미지정' ? today : currentDate);
+  document.getElementById('modalTitle').textContent = '📅 수업 시작일 수정';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:.78rem;color:var(--gray);margin-bottom:.8rem;">
+      시작일이 되면 학생 화면에서 자동으로 "수강 중"으로 바뀌어요
+    </div>
+    <input class="m-input" type="date" id="editStartDateInput" value="${val}">
+    <button class="m-btn" id="editStartDateBtn" onclick="saveStartDate('${docId}')">저장하기 →</button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+async function saveStartDate(docId) {
+  var newDate = (document.getElementById('editStartDateInput')||{}).value;
+  if (!newDate) { showToast('날짜를 선택해주세요'); return; }
+  var btn = document.getElementById('editStartDateBtn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var today = new Date().toISOString().split('T')[0];
+    // 현재 status도 날짜 기준으로 재계산
+    var docSnap = await mod.getDoc(mod.doc(window._db, 'enrollments', docId));
+    var currentStatus = docSnap.exists() ? docSnap.data().status : 'confirmed';
+    var newStatus = currentStatus;
+    if (currentStatus === 'confirmed' || currentStatus === 'active') {
+      newStatus = newDate <= today ? 'active' : 'confirmed';
+    }
+    await mod.updateDoc(mod.doc(window._db, 'enrollments', docId), {
+      startDate: newDate,
+      status: newStatus
+    });
+    closeModal();
+    showToast('✅ 시작일이 ' + newDate + '로 저장됐어요!');
+    loadCoachEnrollments();
+  } catch(err) {
+    showToast('저장 실패'); 
+    btn.textContent = '저장하기 →'; btn.disabled = false;
     console.error(err);
   }
 }
