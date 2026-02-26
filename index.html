@@ -1659,7 +1659,7 @@ async function loadHomeTodayClasses() {
     var snap = await mod.getDocs(mod.query(
       mod.collection(window._db, 'enrollments'),
       mod.where('studentUid', '==', user.uid),
-      mod.where('status', '==', 'confirmed')
+      mod.where('status', '==', 'active')
     ));
     if (snap.empty) {
       el.innerHTML = '<div style="background:var(--warm);border-radius:14px;padding:1rem 1.2rem;text-align:center;font-size:.82rem;color:var(--gray);">수강 중인 수업이 없어요.<br><span style="font-size:.75rem;">수업 탭에서 신청해보세요 →</span></div>';
@@ -2194,41 +2194,68 @@ async function submitEnroll(classKey, className) {
 // ── 신청/확정 상태에 따라 카드 UI 변경 ──
 function applyEnrollStyle(classKey, status) {
   var badge = document.getElementById('badge-' + classKey);
-  var btn = document.getElementById('btn-' + classKey);
+  var btn   = document.getElementById('btn-'   + classKey);
   if (!badge || !btn) return;
+
   if (status === 'pending') {
     badge.textContent = '⏳ 신청 대기';
-    badge.className = 'cc-badge';
+    badge.className   = 'cc-badge';
     badge.style.cssText = 'background:var(--gold-light);color:#8a6a30;';
-    btn.textContent = '⏳ 신청 완료 · 확인 대기 중';
-    btn.className = 'cc-btn';
+    btn.textContent   = '⏳ 신청 완료 · 확인 대기 중';
+    btn.className     = 'cc-btn';
     btn.style.cssText = 'background:var(--gold-light);color:#8a6a30;cursor:default;';
-    btn.onclick = null;
+    btn.onclick       = null;
+
   } else if (status === 'confirmed') {
     badge.textContent = '✓ 수강 확정';
-    badge.className = 'cc-badge enrolled';
+    badge.className   = 'cc-badge';
+    badge.style.cssText = 'background:var(--sage-light);color:var(--sage);';
+    btn.textContent   = '✓ 수강 확정 · 수업 시작 예정';
+    btn.className     = 'cc-btn';
+    btn.style.cssText = 'background:var(--sage-light);color:var(--sage);cursor:default;';
+    btn.onclick       = null;
+
+  } else if (status === 'active') {
+    badge.textContent = '🎓 수강 중';
+    badge.className   = 'cc-badge enrolled';
     badge.style.cssText = '';
-    btn.textContent = '✓ 수강 확정 · 자료 보기';
-    btn.className = 'cc-btn enrolled-btn';
+    btn.textContent   = '🎓 수강 중 · 자료 보기';
+    btn.className     = 'cc-btn enrolled-btn';
     btn.style.cssText = '';
-    btn.onclick = function() { openClassMaterials(classKey, (materialMap[classKey]||{}).name || classKey); };
+    btn.onclick       = function() { openClassMaterials(classKey, (_classNames[classKey] || classKey)); };
   }
 }
 
-// ── 로그인 시 수강 신청 내역 복원 ──
+// ── 로그인 시 수강 신청 내역 복원 + 날짜 기반 자동 active 전환 ──
 async function restoreEnrollments() {
   try {
     var user = window._currentUser;
     if (!user) return;
-    var q = window._query(
-      window._collection(window._db, 'enrollments'),
-      window._where('studentUid', '==', user.uid)
-    );
-    var snap = await window._getDocs(q);
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var today = new Date().toISOString().split('T')[0];
+
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'enrollments'),
+      mod.where('studentUid', '==', user.uid)
+    ));
+
+    var updates = [];
     snap.forEach(function(ds) {
       var d = ds.data();
-      applyEnrollStyle(d.classKey, d.status);
+      var effectiveStatus = d.status;
+
+      // confirmed 상태이고 시작일이 오늘 이하면 → active로 자동 전환
+      if (d.status === 'confirmed' && d.startDate && d.startDate <= today) {
+        effectiveStatus = 'active';
+        updates.push(mod.updateDoc(mod.doc(window._db, 'enrollments', ds.id), { status: 'active' }));
+      }
+
+      applyEnrollStyle(d.classKey, effectiveStatus);
     });
+
+    // 자동 전환 업데이트 일괄 실행
+    if (updates.length > 0) await Promise.all(updates);
+
   } catch(err) { console.error(err); }
 }
 
@@ -2431,23 +2458,17 @@ async function loadCoachStudents() {
       var color = avatarColors[i % avatarColors.length];
       var initial = (d.name || '?').charAt(0);
 
-      var enrollSnap = await mod.getDocs(mod.query(
-        mod.collection(window._db, 'enrollments'),
-        mod.where('studentUid', '==', s.uid),
-        mod.where('status', '==', 'confirmed')
-      ));
-      var pendingSnap = await mod.getDocs(mod.query(
-        mod.collection(window._db, 'enrollments'),
-        mod.where('studentUid', '==', s.uid),
-        mod.where('status', '==', 'pending')
-      ));
-      var hwSnap = await mod.getDocs(mod.query(
-        mod.collection(window._db, 'homework'),
-        mod.where('studentUid', '==', s.uid)
-      ));
+      var [enrollConfirmedSnap, enrollActiveSnap, pendingSnap, hwSnap] = await Promise.all([
+        mod.getDocs(mod.query(mod.collection(window._db,'enrollments'), mod.where('studentUid','==',s.uid), mod.where('status','==','confirmed'))),
+        mod.getDocs(mod.query(mod.collection(window._db,'enrollments'), mod.where('studentUid','==',s.uid), mod.where('status','==','active'))),
+        mod.getDocs(mod.query(mod.collection(window._db,'enrollments'), mod.where('studentUid','==',s.uid), mod.where('status','==','pending'))),
+        mod.getDocs(mod.query(mod.collection(window._db,'homework'),    mod.where('studentUid','==',s.uid)))
+      ]);
 
       var classes = [];
-      enrollSnap.forEach(function(e) { classes.push(e.data().className); });
+      enrollActiveSnap.forEach(function(e) { classes.push('🎓 ' + e.data().className); });
+      enrollConfirmedSnap.forEach(function(e) { classes.push('✓ ' + e.data().className); });
+
       var classLabel = classes.length > 0 ? classes.join(' · ')
         : (pendingSnap.size > 0 ? '⏳ 신청 대기 ' + pendingSnap.size + '개' : '수강 수업 없음');
       var joinDate = d.createdAt ? new Date(d.createdAt.seconds * 1000).toLocaleDateString('ko-KR') : '';
@@ -2507,25 +2528,30 @@ async function openMyMaterials() {
     var html = '';
     snap.forEach(function(ds) {
       var d = ds.data();
-      var isPending = d.status === 'pending';
+      var status = d.status;
       var info = materialMap[d.classKey] || { emoji:'📄', items:['수업 자료'] };
-      var statusBadge = isPending
-        ? '<span style="font-size:.65rem;background:var(--gold-light);color:#8a6a30;border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">신청 대기 중</span>'
-        : '<span style="font-size:.65rem;background:var(--sage-light);color:var(--sage);border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">수강 중</span>';
+
+      var statusBadge =
+        status === 'active'    ? '<span style="font-size:.65rem;background:var(--sage-light);color:var(--sage);border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">🎓 수강 중</span>'
+        : status === 'confirmed' ? '<span style="font-size:.65rem;background:#e8f4e8;color:#5a9a60;border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">✓ 수강 확정</span>'
+        : '<span style="font-size:.65rem;background:var(--gold-light);color:#8a6a30;border-radius:20px;padding:.1rem .5rem;margin-left:.4rem;">⏳ 신청 대기</span>';
+
+      var startInfo = d.startDate
+        ? '<div style="font-size:.68rem;color:var(--gray);margin-bottom:.4rem;">📅 수업 시작일: ' + d.startDate + '</div>'
+        : '';
 
       html += '<div style="margin-bottom:1rem;">'
-        + '<div style="font-size:.88rem;font-weight:600;margin-bottom:.5rem;">' + info.emoji + ' ' + d.className + statusBadge + '</div>';
+        + '<div style="font-size:.88rem;font-weight:600;margin-bottom:.3rem;">' + info.emoji + ' ' + d.className + statusBadge + '</div>'
+        + startInfo;
 
-      if (isPending) {
-        html += '<div style="font-size:.78rem;color:var(--gray);padding:.5rem;background:var(--cream);border-radius:8px;">수강 확정 후 자료가 공개돼요 🔒</div>';
+      if (status === 'active') {
+        // 수강 중 → Firebase 실제 자료 링크로 열기
+        html += '<div style="font-size:.75rem;color:var(--gray);margin-bottom:.4rem;">수업 자료를 눌러 바로 열어보세요</div>'
+          + '<button onclick="openClassMaterials(\'' + d.classKey + '\',\'' + d.className + '\')" style="width:100%;background:var(--sage-light);color:var(--sage);border:none;border-radius:10px;padding:.6rem;font-size:.8rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">📂 자료 보기</button>';
+      } else if (status === 'confirmed') {
+        html += '<div style="font-size:.78rem;color:#5a9a60;padding:.5rem;background:#e8f4e8;border-radius:8px;">수업 시작일에 자료가 공개돼요 📅</div>';
       } else {
-        info.items.forEach(function(item) {
-          html += '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem .2rem;border-bottom:1px solid var(--light);">'
-            + '<span style="font-size:.9rem;">📄</span>'
-            + '<span style="font-size:.82rem;flex:1;">' + item + '</span>'
-            + '<span style="font-size:.72rem;color:var(--rose);cursor:pointer;" onclick="showToast(\'준비 중이에요 💌\')">보기</span>'
-            + '</div>';
-        });
+        html += '<div style="font-size:.78rem;color:var(--gray);padding:.5rem;background:var(--cream);border-radius:8px;">수강 확정 후 자료가 공개돼요 🔒</div>';
       }
       html += '</div>';
     });
@@ -2683,8 +2709,8 @@ async function loadCoachEnrollments() {
         + '<div style="font-size:.78rem;color:var(--gray);margin:.3rem 0;">📱 ' + (d.mode || '') + (d.phone ? ' · ' + d.phone : '') + ' · ' + date + '</div>'
         + (d.note ? '<div style="font-size:.78rem;background:var(--cream);border-radius:8px;padding:.4rem .7rem;margin:.3rem 0;">' + d.note + '</div>' : '')
         + (isPending
-          ? '<button onclick="confirmEnroll(\'' + docId + '\',\'' + (d.studentName||'') + '\',\'' + (d.className||'') + '\')" style="width:100%;margin-top:.6rem;background:linear-gradient(135deg,var(--sage),#5a9a60);color:white;border:none;border-radius:100px;padding:.55rem;font-size:.78rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✓ 수강 확정하기</button>'
-          : '<div style="font-size:.75rem;color:var(--sage);text-align:center;margin-top:.5rem;font-weight:600;">✓ 수강 확정 완료</div>')
+          ? '<button onclick="openConfirmEnrollModal(\'' + docId + '\',\'' + (d.studentName||'') + '\',\'' + (d.className||'') + '\',\'' + (d.classKey||'') + '\')" style="width:100%;margin-top:.6rem;background:linear-gradient(135deg,var(--sage),#5a9a60);color:white;border:none;border-radius:100px;padding:.55rem;font-size:.78rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✓ 수강 확정하기</button>'
+          : '<div style="font-size:.75rem;color:var(--sage);text-align:center;margin-top:.5rem;font-weight:600;">' + (d.status === 'active' ? '🎓 수강 중' : '✓ 수강 확정 완료 · ' + (d.startDate||'시작일 미정')) + '</div>')
         + '</div>';
     });
     listEl.innerHTML = html;
@@ -2694,19 +2720,50 @@ async function loadCoachEnrollments() {
   }
 }
 
-// ── 코치: 수강 확정 ──
-async function confirmEnroll(docId, studentName, className) {
+// ── 코치: 수강 확정 모달 (시작일 입력) ──
+function openConfirmEnrollModal(docId, studentName, className, classKey) {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('modalTitle').textContent = '✓ 수강 확정';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:var(--cream);border-radius:10px;padding:.7rem 1rem;margin-bottom:1rem;">
+      <div style="font-size:.72rem;color:var(--gray);">학생</div>
+      <div style="font-size:.95rem;font-weight:600;">${studentName}</div>
+      <div style="font-size:.8rem;color:var(--gray);margin-top:.2rem;">${className}</div>
+    </div>
+    <div style="font-size:.78rem;color:var(--charcoal);margin-bottom:.4rem;font-weight:500;">수업 시작일</div>
+    <input class="m-input" type="date" id="enrollStartDate" value="${today}" min="${today}">
+    <div style="font-size:.7rem;color:var(--gray);margin:-.3rem 0 .8rem .2rem;">
+      💡 시작일이 되면 학생 화면에서 자동으로 "수강 중"으로 바뀌어요
+    </div>
+    <button class="m-btn" id="confirmEnrollBtn" onclick="confirmEnroll('${docId}','${studentName}','${className}','${classKey}')">
+      수강 확정하기 →
+    </button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 코치: 수강 확정 저장 ──
+async function confirmEnroll(docId, studentName, className, classKey) {
+  var startDate = (document.getElementById('enrollStartDate')||{}).value;
+  if (!startDate) { showToast('시작일을 선택해주세요'); return; }
+  var btn = document.getElementById('confirmEnrollBtn');
+  if (btn) { btn.textContent = '확정 중...'; btn.disabled = true; }
   try {
     var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    // 시작일이 오늘이면 바로 active, 아니면 confirmed
+    var today = new Date().toISOString().split('T')[0];
+    var newStatus = startDate <= today ? 'active' : 'confirmed';
     await mod.updateDoc(mod.doc(window._db, 'enrollments', docId), {
-      status: 'confirmed',
+      status: newStatus,
+      startDate: startDate,
       confirmedAt: mod.serverTimestamp()
     });
-    showToast('✅ ' + studentName + '님 ' + className + ' 수강 확정!');
+    closeModal();
+    showToast('✅ ' + studentName + '님 ' + className + ' 수강 확정! (시작일: ' + startDate + ')');
     loadCoachEnrollments();
     loadCoachStudents();
   } catch(err) {
     showToast('확정에 실패했어요.');
+    if (btn) { btn.textContent = '수강 확정하기 →'; btn.disabled = false; }
     console.error(err);
   }
 }
