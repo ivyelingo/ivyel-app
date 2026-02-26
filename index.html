@@ -1278,6 +1278,13 @@ textarea.m-input { min-height: 100px; resize: none; }
         <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
       </div>
 
+      <!-- 패키지 신청 목록 -->
+      <div class="sec-title" style="font-size:1.1rem;margin-top:1.2rem;">패키지 <em>신청 접수</em></div>
+      <div class="sec-sub" style="margin-bottom:.8rem;">홈페이지 & 앱 신청 통합 관리</div>
+      <div id="coach-package-list">
+        <div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>
+      </div>
+
       <!-- API 키 설정 -->
       <div style="margin-top:1.2rem;padding:1rem;background:var(--warm);border:1.5px solid var(--light);border-radius:14px;">
         <div style="font-size:.75rem;color:var(--gray);margin-bottom:.6rem;">⚙️ AI 피드백 설정</div>
@@ -1519,7 +1526,7 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachMaterials(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachMaterials(); loadCoachPackageRequests(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     // 커뮤니티 글쓰기 박스 - 코치 전용 스타일
@@ -1534,6 +1541,7 @@ function showAppAfterLogin(userData) {
     setTimeout(loadCoachEnrollments, 600);
     setTimeout(loadCoachStudents, 700);
     setTimeout(loadCoachMaterials, 800);
+    setTimeout(loadCoachPackageRequests, 850);
     setTimeout(updateApiKeyStatus, 900);
     setTimeout(loadCommunityPosts, 900); // 커뮤니티도 동일 함수 사용
   } else {
@@ -3039,6 +3047,64 @@ async function openClassMaterials(classKey, className) {
     document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
     console.error(err);
   }
+}
+
+// ── 코치: 패키지 신청 목록 ──
+async function loadCoachPackageRequests() {
+  var listEl = document.getElementById('coach-package-list');
+  if (!listEl) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'packageRequests'),
+      mod.orderBy('requestedAt', 'desc')
+    ));
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">아직 신청 내역이 없어요</div>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      var date = d.requestedAt ? new Date(d.requestedAt.seconds * 1000).toLocaleDateString('ko-KR') : '방금';
+      var isNew = d.status === 'pending';
+      var loginBadge = d.isLoggedIn
+        ? '<span style="font-size:.6rem;background:var(--sage-light);color:var(--sage);border-radius:20px;padding:.1rem .45rem;margin-left:.3rem;">앱회원</span>'
+        : '<span style="font-size:.6rem;background:var(--gold-light);color:#8a6a30;border-radius:20px;padding:.1rem .45rem;margin-left:.3rem;">홈페이지</span>';
+
+      html += '<div class="hw-card" style="margin-bottom:.8rem;">'
+        + '<div class="hw-top">'
+        + '<div class="hw-class">📦 ' + (d.packageName || '패키지') + '</div>'
+        + '<span class="hw-status ' + (isNew ? 'pending' : 'done') + '">' + (isNew ? '⏳ 신규' : '✓ 확인') + '</span>'
+        + '</div>'
+        + '<div style="font-size:.92rem;font-weight:600;margin:.2rem 0;">'
+        + d.name + loginBadge
+        + '</div>'
+        + '<div style="font-size:.78rem;color:var(--gray);margin:.2rem 0;">'
+        + '📱 ' + d.phone + ' · ✉️ ' + d.email
+        + '</div>'
+        + '<div style="font-size:.75rem;color:var(--gray);margin:.2rem 0;">'
+        + d.mode + ' · ' + d.time + ' · ' + d.level
+        + '</div>'
+        + (d.note ? '<div style="font-size:.78rem;background:var(--cream);border-radius:8px;padding:.4rem .7rem;margin:.4rem 0;">' + d.note + '</div>' : '')
+        + '<div style="font-size:.7rem;color:var(--gray);margin-top:.3rem;">' + d.packagePrice + ' · ' + date + '</div>'
+        + (isNew ? '<button onclick="markPackageChecked(\'' + ds.id + '\')" style="width:100%;margin-top:.6rem;background:var(--charcoal);color:var(--cream);border:none;border-radius:100px;padding:.5rem;font-size:.76rem;font-family:\'DM Sans\',sans-serif;cursor:pointer;">✓ 확인 완료</button>' : '')
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+  } catch(err) {
+    listEl.innerHTML = '<div style="color:var(--rose);font-size:.82rem;text-align:center;padding:1rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+async function markPackageChecked(docId) {
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.updateDoc(mod.doc(window._db, 'packageRequests', docId), { status: 'checked' });
+    showToast('✅ 확인 완료!');
+    loadCoachPackageRequests();
+  } catch(err) { showToast('실패했어요'); console.error(err); }
 }
 
 // ── API 키 관리 ──

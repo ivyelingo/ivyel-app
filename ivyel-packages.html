@@ -943,20 +943,20 @@
     <div class="form-group form-row">
       <div>
         <label>이름 *</label>
-        <input type="text" placeholder="홍길동">
+        <input type="text" id="pkgName" placeholder="홍길동">
       </div>
       <div>
         <label>연락처 *</label>
-        <input type="text" placeholder="010-0000-0000">
+        <input type="text" id="pkgPhone" placeholder="010-0000-0000">
       </div>
     </div>
     <div class="form-group">
       <label>이메일 *</label>
-      <input type="email" placeholder="example@email.com">
+      <input type="email" id="pkgEmail" placeholder="example@email.com">
     </div>
     <div class="form-group">
       <label>수업 형태</label>
-      <select>
+      <select id="pkgMode">
         <option>온라인 (Zoom)</option>
         <option>대면</option>
         <option>둘 다 가능</option>
@@ -964,7 +964,7 @@
     </div>
     <div class="form-group">
       <label>희망 수업 시간대</label>
-      <select>
+      <select id="pkgTime">
         <option>평일 오전 (9–12시)</option>
         <option>평일 오후 (13–17시)</option>
         <option>평일 저녁 (18–21시)</option>
@@ -974,7 +974,7 @@
     </div>
     <div class="form-group">
       <label>영어 수준 (자가 평가)</label>
-      <select>
+      <select id="pkgLevel">
         <option>입문 (거의 처음)</option>
         <option>초급 (기초 알고 있음)</option>
         <option>중급 (일상 대화 가능)</option>
@@ -983,13 +983,36 @@
     </div>
     <div class="form-group">
       <label>남기실 말씀</label>
-      <textarea rows="3" placeholder="수업 목표나 궁금한 점을 편하게 적어주세요."></textarea>
+      <textarea id="pkgNote" rows="3" placeholder="수업 목표나 궁금한 점을 편하게 적어주세요."></textarea>
     </div>
-    <button class="submit-btn" onclick="submitForm()">신청 완료하기</button>
+    <button class="submit-btn" id="pkgSubmitBtn" onclick="submitPackageForm()">신청 완료하기</button>
+    <div id="pkgToast" style="display:none;margin-top:1rem;padding:.8rem 1rem;background:#e8f4e8;border-radius:10px;font-size:.85rem;color:#3a6b3e;text-align:center;"></div>
   </div>
 </div>
 
-<script>
+<script type="module">
+  // ── Firebase 초기화 ──
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3LVXK15TKQoNBhkQMGT2dBSMCuHZFBSs",
+    authDomain: "ivyel-elingo.firebaseapp.com",
+    projectId: "ivyel-elingo",
+    storageBucket: "ivyel-elingo.appspot.com",
+    messagingSenderId: "1097546487501",
+    appId: "1:1097546487501:web:04e51bfde36c66be5b4299"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const db   = getFirestore(app);
+  const auth = getAuth(app);
+
+  // 현재 로그인 유저 감지
+  let currentUser = null;
+  onAuthStateChanged(auth, user => { currentUser = user; });
+
   // Filter logic
   let activeClass = 'all';
   let activePeriod = 'all';
@@ -1012,34 +1035,85 @@
 
   function filterCards() {
     document.querySelectorAll('.pkg-card').forEach(card => {
-      const cls = card.dataset.class || '';
+      const cls    = card.dataset.class  || '';
       const period = card.dataset.period || '';
-      const classMatch = activeClass === 'all' || cls.includes(activeClass);
+      const classMatch  = activeClass  === 'all' || cls.includes(activeClass);
       const periodMatch = activePeriod === 'all' || period === activePeriod;
       card.style.display = classMatch && periodMatch ? 'flex' : 'none';
     });
   }
 
   // Modal
-  function openModal(name, price) {
-    document.getElementById('modalPkgName').textContent = name;
+  window.openModal = function(name, price) {
+    document.getElementById('modalPkgName').textContent  = name;
     document.getElementById('modalPkgPrice').textContent = price;
     document.getElementById('modalOverlay').classList.add('open');
+    document.getElementById('pkgToast').style.display = 'none';
     document.body.style.overflow = 'hidden';
-  }
+  };
 
-  function closeModal() {
+  window.closeModal = function() {
     document.getElementById('modalOverlay').classList.remove('open');
     document.body.style.overflow = '';
-  }
+  };
 
-  function closeModalOutside(e) {
-    if (e.target === document.getElementById('modalOverlay')) closeModal();
-  }
+  window.closeModalOutside = function(e) {
+    if (e.target === document.getElementById('modalOverlay')) window.closeModal();
+  };
 
-  function submitForm() {
-    alert('신청이 완료되었습니다! 📩\n1–2일 내로 연락드리겠습니다.');
-    closeModal();
+  // ── 신청 제출 → Firebase 저장 ──
+  window.submitPackageForm = async function() {
+    const name  = document.getElementById('pkgName').value.trim();
+    const phone = document.getElementById('pkgPhone').value.trim();
+    const email = document.getElementById('pkgEmail').value.trim();
+    if (!name)  { showPkgToast('이름을 입력해주세요', 'error'); return; }
+    if (!phone) { showPkgToast('연락처를 입력해주세요', 'error'); return; }
+    if (!email) { showPkgToast('이메일을 입력해주세요', 'error'); return; }
+
+    const btn = document.getElementById('pkgSubmitBtn');
+    btn.textContent = '신청 중...'; btn.disabled = true;
+
+    try {
+      await addDoc(collection(db, 'packageRequests'), {
+        packageName: document.getElementById('modalPkgName').textContent,
+        packagePrice: document.getElementById('modalPkgPrice').textContent,
+        name:   name,
+        phone:  phone,
+        email:  email,
+        mode:   document.getElementById('pkgMode').value,
+        time:   document.getElementById('pkgTime').value,
+        level:  document.getElementById('pkgLevel').value,
+        note:   document.getElementById('pkgNote').value.trim(),
+        // 로그인 여부에 따라 uid 자동 연결
+        studentUid:   currentUser ? currentUser.uid : null,
+        studentEmail: currentUser ? currentUser.email : null,
+        isLoggedIn:   !!currentUser,
+        status:       'pending',
+        requestedAt:  serverTimestamp()
+      });
+
+      // 성공
+      showPkgToast('✅ 신청이 완료됐어요! 1–2일 내로 연락드릴게요 💌', 'success');
+      btn.textContent = '신청 완료 ✓'; btn.disabled = true;
+
+      // 폼 초기화
+      ['pkgName','pkgPhone','pkgEmail','pkgNote'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+
+    } catch(err) {
+      showPkgToast('신청에 실패했어요. 다시 시도해주세요.', 'error');
+      btn.textContent = '신청 완료하기'; btn.disabled = false;
+      console.error(err);
+    }
+  };
+
+  function showPkgToast(msg, type) {
+    const t = document.getElementById('pkgToast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.background = type === 'error' ? '#fdecea' : '#e8f4e8';
+    t.style.color      = type === 'error' ? '#c0392b' : '#3a6b3e';
   }
 </script>
 </body>
