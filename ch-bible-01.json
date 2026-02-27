@@ -1,0 +1,95 @@
+{
+  "id": "bible-01",
+  "track": "성경영어",
+  "trackColor": "rose",
+  "chapter": "Ch.1",
+  "title": "하나님의 사랑",
+  "icon": "✝️",
+  "verse": "\"For God so loved the world...\"",
+  "ref": "John 3:16 — 요한복음 3장 16절",
+  "desc": "요한복음 3:16을 영어로 읽고 듣고 말하고 써봐요 · 약 20분",
+  "doneMsg": "\"For God so loved the world\"\n이 말씀이 마음에 새겨지길 바랍니다 💕",
+
+  "cards": [
+    { "w": "loved",    "p": "[lʌvd]",      "m": "사랑하셨다", "e": "\"For God so loved the world\"\n하나님이 세상을 이처럼 사랑하셨으니" },
+    { "w": "world",    "p": "[wɜːrld]",     "m": "세상",       "e": "\"he loved the world\"\n세상을 사랑하사" },
+    { "w": "gave",     "p": "[ɡeɪv]",       "m": "주셨다",     "e": "\"he gave his one and only Son\"\n독생자를 주셨으니" },
+    { "w": "believes", "p": "[bɪˈliːvz]",   "m": "믿는",       "e": "\"whoever believes in him\"\n그를 믿는 자마다" },
+    { "w": "eternal",  "p": "[ɪˈtɜːrnl]",   "m": "영원한",     "e": "\"have eternal life\"\n영생을 얻게 하려 하심이라" }
+  ],
+
+  "verseEn": "\"For <b>God</b> so <b>loved</b> the <b>world</b> that he gave his one and only <b>Son</b>, that whoever <b>believes</b> in him shall not <b>perish</b> but have <b>eternal</b> life.\"",
+  "verseKo": "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라",
+  "verseAudio": "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.",
+
+  "wordList": [
+    { "w": "God",      "m": "하나님 [gɑːd]" },
+    { "w": "loved",    "m": "사랑하셨다 [lʌvd]" },
+    { "w": "world",    "m": "세상 [wɜːrld]" },
+    { "w": "believes", "m": "믿는 [bɪˈliːvz]" },
+    { "w": "eternal",  "m": "영원한 [ɪˈtɜːrnl]" }
+  ],
+
+  "dictHint": "힌트: \"For God so _____ the world...\"",
+  "dictAnswer": "\"For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.\"",
+
+  "phrases": [
+    "For God so loved",
+    "the world",
+    "that he gave his one and only Son",
+    "shall not perish but have eternal life"
+  ],
+  "speakText": "For God so loved the world that he gave his one and only Son",
+
+  "quizzes": [
+    {
+      "type": "빈칸 채우기",
+      "q": "\"For God so <b>____</b> the world\"",
+      "opts": [
+        { "v": "likes",  "label": "likes" },
+        { "v": "loved",  "label": "loved" },
+        { "v": "made",   "label": "made" },
+        { "v": "saved",  "label": "saved" }
+      ],
+      "answer": "loved",
+      "ok": "✓ 정답! \"loved\"는 \"사랑하셨다\"입니다 💕",
+      "ng": "정답은 \"loved\"예요. 하나님이 세상을 사랑하셨다는 뜻이에요."
+    },
+    {
+      "type": "뜻 고르기",
+      "q": "\"eternal life\"의 뜻은?",
+      "opts": [
+        { "v": "a", "label": "아름다운 삶" },
+        { "v": "b", "label": "영생 (영원한 삶)" },
+        { "v": "c", "label": "축복" },
+        { "v": "d", "label": "구원" }
+      ],
+      "answer": "b",
+      "ok": "✓ 정답! \"eternal life\"는 영생, 영원한 삶이에요 🌟",
+      "ng": "\"eternal\"은 영원한, \"life\"는 삶 — 합치면 영생이에요!"
+    },
+    {
+      "type": "문장 완성",
+      "q": "하나님이 세상에 주신 것은?",
+      "opts": [
+        { "v": "a", "label": "His only Son (독생자)" },
+        { "v": "b", "label": "The Bible (성경)" },
+        { "v": "c", "label": "Eternal peace (영원한 평화)" },
+        { "v": "d", "label": "His blessing (축복)" }
+      ],
+      "answer": "a",
+      "ok": "✓ 정답! 하나님은 독생자 예수님을 보내주셨어요 ✝️",
+      "ng": "\"he gave his one and only Son\" — 독생자를 주셨다는 뜻이에요!"
+    }
+  ],
+
+  "journalChips": [
+    { "label": "Today I learned that...",       "text": "Today I learned that " },
+    { "label": "God's love makes me feel...",   "text": "God's love makes me feel " },
+    { "label": "I am grateful because...",      "text": "I am grateful because " },
+    { "label": "John 3:16 reminds me...",       "text": "John 3:16 reminds me that " }
+  ],
+  "journalPrompt": "오늘 배운 하나님의 사랑에 대해\n영어로 짧게 써봐요.",
+
+  "nextChapter": "bible-02"
+}
