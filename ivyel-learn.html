@@ -178,17 +178,208 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
 <div class="topbar">
   <button class="back-btn" id="backBtn">←</button>
   <div class="tb-info">
-    <div class="tb-track" id="tbTrack">📖 불러오는 중...</div>
-    <div class="tb-title" id="tbTitle"></div>
+    <div class="tb-track">📖 성경영어 트랙</div>
+    <div class="tb-title">Ch.2 — 하나님의 사랑 · John 3:16</div>
   </div>
   <div class="xp-pill" id="xpPill">✦ 0 XP</div>
 </div>
 
 <div class="prog-wrap"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
-<div class="dots" id="dots"></div>
 
-<!-- 스크린 컨테이너 (JS로 동적 생성) -->
-<div id="screenWrap"></div>
+<div class="dots" id="dots">
+  <div class="dot active"></div><div class="dot"></div><div class="dot"></div>
+  <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+</div>
+
+<!-- S0 인트로 -->
+<div class="screen on" id="s0">
+  <div class="i-card">
+    <span class="i-icon">✝️</span>
+    <div class="i-tag">성경영어 Ch.2</div>
+    <div class="i-title">하나님의 사랑</div>
+    <div class="i-verse">"For God so loved the world..."</div>
+    <div class="i-desc">요한복음 3:16을 영어로 읽고 듣고 말하고 써봐요 · 약 20분</div>
+  </div>
+  <div class="step-list">
+    <div class="step-row"><div class="step-n">1</div><div><div class="step-lbl">🃏 단어 플래시카드</div><div class="step-sub">핵심 단어 5개 · 5분</div></div></div>
+    <div class="step-row"><div class="step-n">2</div><div><div class="step-lbl">🎧 듣기 &amp; 읽기</div><div class="step-sub">구절 듣고 따라읽기 · 3분</div></div></div>
+    <div class="step-row"><div class="step-n">3</div><div><div class="step-lbl">✍️ 받아쓰기</div><div class="step-sub">딕테이션 · 5분</div></div></div>
+    <div class="step-row"><div class="step-n">4</div><div><div class="step-lbl">🎤 따라 말하기</div><div class="step-sub">스피킹 연습 · 3분</div></div></div>
+    <div class="step-row"><div class="step-n">5</div><div><div class="step-lbl">❓ 퀴즈</div><div class="step-sub">3문제 · 3분</div></div></div>
+    <div class="step-row"><div class="step-n">6</div><div><div class="step-lbl">📝 영어 일기</div><div class="step-sub">묵상 쓰기 · 선택</div></div></div>
+  </div>
+</div>
+
+<!-- S1 플래시카드 -->
+<div class="screen" id="s1">
+  <div class="fc-nav">
+    <button class="fc-nav-btn" id="btn1st">↩ 처음으로</button>
+    <div class="fc-counter" id="fcCnt">1 / 5</div>
+    <button class="fc-nav-btn" id="btnPrv" disabled>← 이전</button>
+  </div>
+  <div class="fc-card" id="fcCard">
+    <div class="fc-inner">
+      <div class="fc-front">
+        <div class="fc-hint">탭해서 뜻 보기 👆</div>
+        <div class="fc-word" id="fcWord">loved</div>
+        <div class="fc-ph" id="fcPh">[lʌvd]</div>
+        <div class="fc-tip" style="font-size:.68rem;color:var(--gray);margin-top:.5rem;">카드를 탭하세요</div>
+      </div>
+      <div class="fc-back">
+        <div class="fc-hint" style="color:var(--gold-l)">뜻</div>
+        <div class="fc-mean" id="fcMean">사랑하셨다</div>
+        <div class="fc-ex" id="fcEx"></div>
+      </div>
+    </div>
+  </div>
+  <div class="fc-btns" id="fcBtns" style="display:none">
+    <button class="fc-btn fc-again" id="fcAgain">🔄 다시</button>
+    <button class="fc-btn fc-know" id="fcKnow">✓ 알았어요</button>
+  </div>
+  <div class="fc-tip" id="fcTip">카드를 탭해서 뜻을 확인하세요</div>
+</div>
+
+<!-- S2 듣기 -->
+<div class="screen" id="s2">
+  <div class="verse-box">
+    <div class="verse-ref">John 3:16 — 요한복음 3장 16절</div>
+    <div class="verse-en">
+      "For <span class="hl">God</span> so <span class="hl">loved</span> the <span class="hl">world</span>
+      that he gave his one and only <span class="hl">Son</span>,
+      that whoever <span class="hl">believes</span> in him
+      shall not <span class="hl">perish</span> but have <span class="hl">eternal</span> life."
+    </div>
+    <div class="verse-ko">하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라</div>
+  </div>
+  <button class="aud-btn" id="audBtn">
+    <span class="aud-lbl">🔊 원어민 발음 듣기</span>
+    <div class="wave"><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div></div>
+  </button>
+  <div class="wb-box">
+    <div class="wb-title">핵심 단어 발음</div>
+    <div class="wb-row"><div class="wb-word">God</div><div class="wb-mean">하나님 [gɑːd]</div><button class="wb-play" data-w="God">▶</button></div>
+    <div class="wb-row"><div class="wb-word">loved</div><div class="wb-mean">사랑하셨다 [lʌvd]</div><button class="wb-play" data-w="loved">▶</button></div>
+    <div class="wb-row"><div class="wb-word">world</div><div class="wb-mean">세상 [wɜːrld]</div><button class="wb-play" data-w="world">▶</button></div>
+    <div class="wb-row"><div class="wb-word">believes</div><div class="wb-mean">믿는 [bɪˈliːvz]</div><button class="wb-play" data-w="believes">▶</button></div>
+    <div class="wb-row"><div class="wb-word">eternal</div><div class="wb-mean">영원한 [ɪˈtɜːrnl]</div><button class="wb-play" data-w="eternal">▶</button></div>
+  </div>
+</div>
+
+<!-- S3 받아쓰기 -->
+<div class="screen" id="s3">
+  <div class="dict-box">
+    <div class="dict-info">🎧 음성을 듣고 들리는 대로 영어로 받아쓰세요</div>
+    <button class="dict-aud" id="dictAud">🔊 듣기 (3번까지 가능)</button>
+    <textarea class="dict-in" id="dictIn" placeholder="들리는 영어 문장을 여기에 쓰세요..."></textarea>
+    <div class="dict-hint">힌트: "For God so _____ the world..."</div>
+    <div class="dict-ans" id="dictAns">
+      ✓ 정답: "For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life."
+    </div>
+  </div>
+  <button class="abtn sec" id="chkDict">정답 확인하기</button>
+</div>
+
+<!-- S4 따라말하기 -->
+<div class="screen" id="s4">
+  <div class="spk-verse">
+    <div class="spk-lbl">따라 말해보세요 🎤</div>
+    <div class="spk-txt">"For God so loved the world<br>that he gave his one and only Son"</div>
+  </div>
+  <div class="mic-wrap">
+    <button class="mic-btn" id="micBtn">🎤</button>
+    <div class="mic-lbl" id="micLbl">버튼을 눌러 말하기 시작</div>
+  </div>
+  <div style="font-size:.76rem;color:var(--gray);text-align:center;margin-bottom:.9rem;font-family:'Noto Serif KR',serif;font-weight:300;">문장을 나눠서 연습해봐요</div>
+  <div class="phrase-list">
+    <div class="phrase-row" id="pr1"><span>▶</span><span class="pr-txt">"For God so loved"</span><span class="pr-chk">✓</span></div>
+    <div class="phrase-row" id="pr2"><span>▶</span><span class="pr-txt">"the world"</span><span class="pr-chk">✓</span></div>
+    <div class="phrase-row" id="pr3"><span>▶</span><span class="pr-txt">"that he gave his one and only Son"</span><span class="pr-chk">✓</span></div>
+    <div class="phrase-row" id="pr4"><span>▶</span><span class="pr-txt">"shall not perish but have eternal life"</span><span class="pr-chk">✓</span></div>
+  </div>
+</div>
+
+<!-- S5 퀴즈 -->
+<div class="screen" id="s5">
+  <div id="q1blk">
+    <div class="q-box">
+      <div class="q-type">빈칸 채우기</div>
+      <div class="q-num">문제 1 / 3</div>
+      <div class="q-txt">"For God so <span class="q-blank">____</span> the world"</div>
+    </div>
+    <div class="q-opts" id="q1opts">
+      <button class="q-opt" data-v="likes"><span class="opt-lt">A</span>likes</button>
+      <button class="q-opt" data-v="loved"><span class="opt-lt">B</span>loved</button>
+      <button class="q-opt" data-v="made"><span class="opt-lt">C</span>made</button>
+      <button class="q-opt" data-v="saved"><span class="opt-lt">D</span>saved</button>
+    </div>
+    <div class="q-fb" id="q1fb"></div>
+  </div>
+  <div id="q2blk" style="display:none">
+    <div class="q-box">
+      <div class="q-type">뜻 고르기</div>
+      <div class="q-num">문제 2 / 3</div>
+      <div class="q-txt">"eternal life"의 뜻은?</div>
+    </div>
+    <div class="q-opts" id="q2opts">
+      <button class="q-opt" data-v="a"><span class="opt-lt">A</span>아름다운 삶</button>
+      <button class="q-opt" data-v="b"><span class="opt-lt">B</span>영생 (영원한 삶)</button>
+      <button class="q-opt" data-v="c"><span class="opt-lt">C</span>축복</button>
+      <button class="q-opt" data-v="d"><span class="opt-lt">D</span>구원</button>
+    </div>
+    <div class="q-fb" id="q2fb"></div>
+  </div>
+  <div id="q3blk" style="display:none">
+    <div class="q-box">
+      <div class="q-type">문장 완성</div>
+      <div class="q-num">문제 3 / 3</div>
+      <div class="q-txt">하나님이 세상에 주신 것은?</div>
+    </div>
+    <div class="q-opts" id="q3opts">
+      <button class="q-opt" data-v="a"><span class="opt-lt">A</span>His only Son (독생자)</button>
+      <button class="q-opt" data-v="b"><span class="opt-lt">B</span>The Bible (성경)</button>
+      <button class="q-opt" data-v="c"><span class="opt-lt">C</span>Eternal peace (영원한 평화)</button>
+      <button class="q-opt" data-v="d"><span class="opt-lt">D</span>His blessing (축복)</button>
+    </div>
+    <div class="q-fb" id="q3fb"></div>
+  </div>
+</div>
+
+<!-- S6 영어 일기 -->
+<div class="screen" id="s6">
+  <div class="wr-prompt">
+    <div class="wr-tag">오늘의 묵상 일기 ✍️</div>
+    <div class="wr-txt">오늘 배운 하나님의 사랑에 대해<br>영어로 짧게 써봐요.</div>
+  </div>
+  <div style="font-size:.78rem;color:var(--gray);margin-bottom:.6rem;font-family:'Noto Serif KR',serif;font-weight:300;">문장 시작이 막히면 아래를 탭해보세요</div>
+  <div class="chips">
+    <span class="chip" data-t="Today I learned that ">Today I learned that...</span>
+    <span class="chip" data-t="God's love makes me feel ">God's love makes me feel...</span>
+    <span class="chip" data-t="I am grateful because ">I am grateful because...</span>
+    <span class="chip" data-t="John 3:16 reminds me that ">John 3:16 reminds me...</span>
+  </div>
+  <textarea class="wr-area" id="wrArea" placeholder="영어로 자유롭게 써보세요. 틀려도 괜찮아요 ✨"></textarea>
+  <div class="wr-wc" id="wrWc">0 단어</div>
+</div>
+
+<!-- S7 완료 -->
+<div class="screen" id="s7">
+  <div class="done-wrap">
+    <div class="done-icon">🎉</div>
+    <div class="done-title">챕터 <em>완료!</em></div>
+    <div class="done-sub">오늘도 정말 잘 하셨어요!<br>"For God so loved the world"<br>이 말씀이 마음에 새겨지길 바랍니다 💕</div>
+    <div class="xp-box">
+      <div class="xp-tag">획득한 경험치</div>
+      <div><span class="xp-num" id="doneXP">0</span> <span class="xp-u">XP</span></div>
+    </div>
+    <div class="stats">
+      <div class="s-box"><div class="s-num">5</div><div class="s-lbl">단어 학습</div></div>
+      <div class="s-box"><div class="s-num" id="doneQ">0/3</div><div class="s-lbl">퀴즈 정답</div></div>
+      <div class="s-box"><div class="s-num">🔥7</div><div class="s-lbl">연속 학습</div></div>
+    </div>
+    <button class="abtn gold" style="width:100%;margin-bottom:.7rem" id="nextCh">다음 챕터 →</button>
+    <button class="abtn sec" style="width:100%" id="homeBtn2">홈으로 돌아가기</button>
+  </div>
+</div>
 
 <!-- 하단 버튼 -->
 <div class="bottom" id="bottom">
@@ -200,10 +391,15 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
 
 <script>
 (function () {
+  var CARDS = [
+    { w: 'loved',    p: '[lʌvd]',       m: '사랑하셨다', e: '"For God so loved the world"\n하나님이 세상을 이처럼 사랑하셨으니' },
+    { w: 'world',    p: '[wɜːrld]',      m: '세상',       e: '"he loved the world"\n세상을 사랑하사' },
+    { w: 'gave',     p: '[ɡeɪv]',        m: '주셨다',     e: '"he gave his one and only Son"\n독생자를 주셨으니' },
+    { w: 'believes', p: '[bɪˈliːvz]',    m: '믿는',       e: '"whoever believes in him"\n그를 믿는 자마다' },
+    { w: 'eternal',  p: '[ɪˈtɜːrnl]',    m: '영원한',     e: '"have eternal life"\n영생을 얻게 하려 하심이라' }
+  ];
 
-  // ── URL에서 챕터 ID 읽기 ──
-  var params = new URLSearchParams(window.location.search);
-  var chId   = params.get('ch') || 'bible-01';
+  var cur = 0, ci = 0, xp = 0, qok = 0, dN = 0, recOn = false, audOn = false, audT = null, TOTAL = 8;
 
   function g(id) { return document.getElementById(id); }
 
@@ -223,431 +419,222 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
     window.speechSynthesis.speak(u);
   }
 
-  // ── Firebase에서 챕터 로드 ──
-  import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js').then(function(appMod) {
-    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(function(mod) {
-      var firebaseConfig = {
-        apiKey: "AIzaSyC3LVXK15TKQoNBhkQMGT2dBSMCuHZFBSs",
-        authDomain: "ivyel-elingo.firebaseapp.com",
-        projectId: "ivyel-elingo",
-        storageBucket: "ivyel-elingo.appspot.com",
-        messagingSenderId: "1097546487501",
-        appId: "1:1097546487501:web:04e51bfde36c66be5b4299"
-      };
-      var app = appMod.initializeApp(firebaseConfig);
-      var db  = mod.getFirestore(app);
+  function addXP(n) { xp += n; g('xpPill').textContent = '✦ ' + xp + ' XP'; }
 
-      mod.getDoc(mod.doc(db, 'chapters', chId)).then(function(snap) {
-        if (!snap.exists()) {
-          g('screenWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:#C4998A;">'
-            + '📭 챕터를 찾을 수 없어요<br><span style="font-size:.8rem;color:#999;">(id: ' + chId + ')</span></div>';
-          return;
-        }
-        initLearn(snap.data());
-      }).catch(function(err) {
-        g('screenWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:#C4998A;">'
-          + '📭 불러오기 실패<br><span style="font-size:.8rem;color:#999;">' + err.message + '</span></div>';
-      });
+  function updateProg() {
+    g('progBar').style.width = (cur / (TOTAL - 1) * 100) + '%';
+    var dots = document.querySelectorAll('.dot');
+    dots.forEach(function (d, i) {
+      d.className = 'dot';
+      if (i < cur) d.classList.add('done');
+      else if (i === cur) d.classList.add('active');
     });
+  }
+
+  function updateBtns() {
+    var bt = g('bottom'), mb = g('mainBtn'), pb = g('prevBtn');
+    if (cur === 7) { bt.style.display = 'none'; return; }
+    if (cur === 1) { bt.style.display = 'none'; return; }
+    bt.style.display = 'block';
+    var lbl = { 0: '시작하기 →', 2: '다음 →', 3: '다음 →', 4: '다음 →', 5: '다음 →', 6: '완료하기 ✓' };
+    mb.textContent = lbl[cur] || '다음 →';
+    pb.style.display = cur === 0 ? 'none' : 'block';
+  }
+
+  function goTo(n) {
+    g('s' + cur).classList.remove('on');
+    cur = n;
+    g('s' + cur).classList.add('on');
+    updateProg(); updateBtns();
+    if (cur === 1) { resetFC(); }
+    if (cur === 7) { g('doneXP').textContent = xp; g('doneQ').textContent = qok + '/3'; }
+  }
+
+  g('mainBtn').addEventListener('click', function () {
+    if (cur === 6) {
+      if (g('wrArea').value.trim().length < 5) { toast('영어로 한 문장만 써도 괜찮아요 ✨'); return; }
+      addXP(30);
+    }
+    if (cur < TOTAL - 1) goTo(cur + 1);
   });
 
-  // ── 학습 초기화 ──
-  function initLearn(C) {
-    var cur = 0, ci = 0, xp = 0, qok = 0, dN = 0, recOn = false, audOn = false, audT = null;
-    var TOTAL = 8;
+  g('prevBtn').addEventListener('click', function () { if (cur > 0) goTo(cur - 1); });
 
-    // 상단 정보
-    g('tbTrack').textContent = '📖 ' + C.track + ' 트랙';
-    g('tbTitle').textContent = C.chapter + ' — ' + C.title;
-    document.title = 'Elingo ' + C.chapter + ' — ' + C.title;
+  g('backBtn').addEventListener('click', function () {
+    toast('홈으로 이동합니다');
+    setTimeout(function () { window.location.href = 'ivyel-app.html'; }, 800);
+  });
 
-    // 도트 생성
-    var dotsEl = g('dots');
-    dotsEl.innerHTML = '';
-    for (var di = 0; di < TOTAL; di++) {
-      var dot = document.createElement('div');
-      dot.className = 'dot' + (di === 0 ? ' active' : '');
-      dotsEl.appendChild(dot);
-    }
+  // 플래시카드
+  function resetFC() {
+    ci = 0; showCard(0);
+    g('fcCard').style.opacity = '1';
+    g('fcCard').style.pointerEvents = 'auto';
+  }
 
-    // ── 스크린 동적 생성 ──
-    var wrap = g('screenWrap');
-    wrap.innerHTML = buildScreens(C);
+  function showCard(i) {
+    var c = CARDS[i];
+    g('fcWord').textContent = c.w;
+    g('fcPh').textContent = c.p;
+    g('fcMean').textContent = c.m;
+    g('fcEx').textContent = c.e;
+    g('fcCnt').textContent = (i + 1) + ' / ' + CARDS.length;
+    g('fcCard').classList.remove('flipped');
+    g('fcBtns').style.display = 'none';
+    g('fcTip').style.display = 'block';
+    g('btnPrv').disabled = i === 0;
+  }
 
-    // 이벤트 바인딩
-    bindEvents(C);
+  g('fcCard').addEventListener('click', function () {
+    if (this.classList.contains('flipped')) return;
+    this.classList.add('flipped');
+    g('fcBtns').style.display = 'flex';
+    g('fcTip').style.display = 'none';
+    speak(CARDS[ci].w);
+  });
 
-    function addXP(n) { xp += n; g('xpPill').textContent = '✦ ' + xp + ' XP'; }
+  g('fcKnow').addEventListener('click', function () { addXP(10); nextCard(); });
+  g('fcAgain').addEventListener('click', function () { nextCard(); });
 
-    function updateProg() {
-      g('progBar').style.width = (cur / (TOTAL - 1) * 100) + '%';
-      var dots = document.querySelectorAll('.dot');
-      dots.forEach(function(d, i) {
-        d.className = 'dot';
-        if (i < cur) d.classList.add('done');
-        else if (i === cur) d.classList.add('active');
-      });
-    }
-
-    function updateBtns() {
-      var bt = g('bottom'), mb = g('mainBtn'), pb = g('prevBtn');
-      if (cur === 7) { bt.style.display = 'none'; return; }
-      if (cur === 1) { bt.style.display = 'none'; return; }
-      bt.style.display = 'block';
-      var lbl = { 0:'시작하기 →', 2:'다음 →', 3:'다음 →', 4:'다음 →', 5:'다음 →', 6:'완료하기 ✓' };
-      mb.textContent = lbl[cur] || '다음 →';
-      pb.style.display = cur === 0 ? 'none' : 'block';
-    }
-
-    function goTo(n) {
-      g('s' + cur).classList.remove('on');
-      cur = n;
-      g('s' + cur).classList.add('on');
-      updateProg(); updateBtns();
-      if (cur === 1) { resetFC(); }
-      if (cur === 7) {
-        g('doneXP').textContent = xp;
-        g('doneQ').textContent  = qok + '/' + C.quizzes.length;
-      }
-    }
-
-    g('mainBtn').addEventListener('click', function() {
-      if (cur === 6) {
-        if (g('wrArea').value.trim().length < 5) { toast('영어로 한 문장만 써도 괜찮아요 ✨'); return; }
-        addXP(30);
-      }
-      if (cur < TOTAL - 1) goTo(cur + 1);
-    });
-    g('prevBtn').addEventListener('click', function() { if (cur > 0) goTo(cur - 1); });
-    g('backBtn').addEventListener('click', function() {
-      toast('홈으로 이동합니다');
-      setTimeout(function() { window.location.href = 'index.html'; }, 800);
-    });
-
-    // ── 플래시카드 ──
-    function resetFC() {
-      ci = 0; showCard(0);
-      g('fcCard').style.opacity = '1';
-      g('fcCard').style.pointerEvents = 'auto';
-    }
-
-    function showCard(i) {
-      var c = C.cards[i];
-      g('fcWord').textContent = c.w;
-      g('fcPh').textContent   = c.p;
-      g('fcMean').textContent = c.m;
-      g('fcEx').textContent   = c.e;
-      g('fcCnt').textContent  = (i + 1) + ' / ' + C.cards.length;
-      g('fcCard').classList.remove('flipped');
+  function nextCard() {
+    ci++;
+    if (ci >= CARDS.length) {
+      addXP(20); toast('단어 완료! XP 획득!');
+      g('fcCard').style.opacity = '0.5';
+      g('fcCard').style.pointerEvents = 'none';
       g('fcBtns').style.display = 'none';
-      g('fcTip').style.display  = 'block';
-      g('btnPrv').disabled = i === 0;
-    }
-
-    function nextCard() {
-      ci++;
-      if (ci >= C.cards.length) {
-        addXP(20); toast('단어 완료! XP 획득!');
-        g('fcCard').style.opacity      = '0.5';
-        g('fcCard').style.pointerEvents = 'none';
-        g('fcBtns').style.display      = 'none';
-        g('bottom').style.display      = 'block';
-        g('mainBtn').textContent       = '다음 단계 →';
-        g('prevBtn').style.display     = 'block';
-      } else { showCard(ci); }
-    }
-
-    g('fcCard').addEventListener('click', function() {
-      if (this.classList.contains('flipped')) return;
-      this.classList.add('flipped');
-      g('fcBtns').style.display = 'flex';
-      g('fcTip').style.display  = 'none';
-      speak(C.cards[ci].w);
-    });
-    g('fcKnow').addEventListener('click',  function() { addXP(10); nextCard(); });
-    g('fcAgain').addEventListener('click', function() { nextCard(); });
-    g('btn1st').addEventListener('click', function() {
-      ci = 0; showCard(0);
-      g('fcCard').style.opacity       = '1';
-      g('fcCard').style.pointerEvents = 'auto';
-      g('bottom').style.display       = 'none';
-      toast('↩ 첫 번째 카드로 돌아왔어요');
-    });
-    g('btnPrv').addEventListener('click', function() {
-      if (ci <= 0) return; ci--; showCard(ci);
-      g('fcCard').style.opacity       = '1';
-      g('fcCard').style.pointerEvents = 'auto';
-      g('bottom').style.display       = 'none';
-    });
-
-    // ── 오디오 ──
-    g('audBtn').addEventListener('click', function() {
-      if (audOn) {
-        window.speechSynthesis.cancel();
-        this.classList.remove('on'); audOn = false; clearTimeout(audT);
-      } else {
-        this.classList.add('on'); audOn = true;
-        speak(C.verseAudio);
-        var self = this;
-        audT = setTimeout(function() { self.classList.remove('on'); audOn = false; }, 7000);
-      }
-    });
-    document.querySelectorAll('.wb-play').forEach(function(b) {
-      b.addEventListener('click', function() { speak(this.dataset.w); toast('🔊 ' + this.dataset.w); });
-    });
-
-    // ── 받아쓰기 ──
-    g('dictAud').addEventListener('click', function() {
-      if (dN >= 3) { toast('최대 3번까지 들을 수 있어요'); return; }
-      dN++; this.textContent = '🔊 다시 듣기 (' + dN + '/3)';
-      speak(C.verseAudio);
-    });
-    g('chkDict').addEventListener('click', function() {
-      g('dictAns').classList.add('show');
-      addXP(20); toast('✅ 정답 확인! +20 XP');
-    });
-
-    // ── 스피킹 ──
-    g('micBtn').addEventListener('click', function() {
-      if (!recOn) {
-        recOn = true; this.classList.add('rec'); this.textContent = '⏹';
-        g('micLbl').textContent = '말하는 중... 탭해서 멈추기';
-        speak(C.speakText);
-      } else {
-        recOn = false; this.classList.remove('rec'); this.textContent = '🎤';
-        g('micLbl').textContent = '잘 하셨어요! 다시 해볼까요?';
-        addXP(15); toast('🎤 훌륭해요! +15 XP');
-      }
-    });
-    for (var pi = 0; pi < C.phrases.length; pi++) {
-      (function(n, phrase) {
-        var el = g('pr' + (n + 1));
-        if (el) el.addEventListener('click', function() {
-          speak(phrase);
-          this.classList.add('done');
-          this.querySelector('.pr-chk').style.display = 'inline';
-          addXP(5);
-        });
-      })(pi, C.phrases[pi]);
-    }
-
-    // ── 퀴즈 ──
-    C.quizzes.forEach(function(quiz, qi) {
-      var optId = 'q' + (qi+1) + 'opts';
-      var fbId  = 'q' + (qi+1) + 'fb';
-      var nextBlk = qi + 1 < C.quizzes.length ? 'q' + (qi+2) + 'blk' : null;
-      document.querySelectorAll('#' + optId + ' .q-opt').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var opts = document.querySelectorAll('#' + optId + ' .q-opt');
-          opts.forEach(function(o) {
-            o.disabled = true;
-            if (o.dataset.v === quiz.answer) o.classList.add('reveal');
-          });
-          var fb = g(fbId);
-          if (this.dataset.v === quiz.answer) {
-            this.classList.add('correct');
-            fb.className = 'q-fb show ok'; fb.textContent = quiz.ok;
-            qok++; addXP(20);
-          } else {
-            this.classList.add('wrong');
-            fb.className = 'q-fb show ng'; fb.textContent = quiz.ng;
-          }
-          g('doneQ').textContent = qok + '/' + C.quizzes.length;
-          if (nextBlk) {
-            setTimeout(function() {
-              g('q' + (qi+1) + 'blk').style.display = 'none';
-              g(nextBlk).style.display = 'block';
-            }, 1200);
-          }
-        });
-      });
-    });
-
-    // ── 글쓰기 ──
-    document.querySelectorAll('.chip').forEach(function(c) {
-      c.addEventListener('click', function() {
-        var a = g('wrArea');
-        a.value = a.value ? a.value + ' ' + this.dataset.t : this.dataset.t;
-        a.focus(); wc();
-      });
-    });
-    g('wrArea').addEventListener('input', wc);
-    function wc() {
-      var t = g('wrArea').value.trim();
-      g('wrWc').textContent = (t ? t.split(/\s+/).length : 0) + ' 단어';
-    }
-
-    // ── 완료 ──
-    g('nextCh').addEventListener('click', function() {
-      if (C.nextChapter) {
-        window.location.href = 'ivyel-learn.html?ch=' + C.nextChapter;
-      } else {
-        toast('다음 챕터가 곧 업로드돼요 💌');
-      }
-    });
-    g('homeBtn2').addEventListener('click', function() { window.location.href = 'index.html'; });
-
-    updateProg(); updateBtns();
-    showCard(0);
+      g('bottom').style.display = 'block';
+      g('mainBtn').textContent = '다음 단계 →';
+      g('prevBtn').style.display = 'block';
+    } else { showCard(ci); }
   }
 
-  // ── HTML 스크린 빌더 ──
-  function buildScreens(C) {
-    var h = '';
+  g('btn1st').addEventListener('click', function () {
+    ci = 0; showCard(0);
+    g('fcCard').style.opacity = '1';
+    g('fcCard').style.pointerEvents = 'auto';
+    g('bottom').style.display = 'none';
+    toast('↩ 첫 번째 카드로 돌아왔어요');
+  });
 
-    // S0 인트로
-    h += '<div class="screen on" id="s0">'
-      + '<div class="i-card">'
-      + '<span class="i-icon">' + C.icon + '</span>'
-      + '<div class="i-tag">' + C.track + ' ' + C.chapter + '</div>'
-      + '<div class="i-title">' + C.title + '</div>'
-      + '<div class="i-verse">' + C.verse + '</div>'
-      + '<div class="i-desc">' + C.desc + '</div>'
-      + '</div>'
-      + '<div class="step-list">'
-      + ['🃏 단어 플래시카드|핵심 단어 ' + C.cards.length + '개 · 5분',
-         '🎧 듣기 &amp; 읽기|구절 듣고 따라읽기 · 3분',
-         '✍️ 받아쓰기|딕테이션 · 5분',
-         '🎤 따라 말하기|스피킹 연습 · 3분',
-         '❓ 퀴즈|' + C.quizzes.length + '문제 · 3분',
-         '📝 영어 일기|묵상 쓰기 · 선택'].map(function(s, i) {
-           var parts = s.split('|');
-           return '<div class="step-row"><div class="step-n">' + (i+1) + '</div>'
-             + '<div><div class="step-lbl">' + parts[0] + '</div>'
-             + '<div class="step-sub">' + parts[1] + '</div></div></div>';
-         }).join('')
-      + '</div></div>';
+  g('btnPrv').addEventListener('click', function () {
+    if (ci <= 0) return;
+    ci--; showCard(ci);
+    g('fcCard').style.opacity = '1';
+    g('fcCard').style.pointerEvents = 'auto';
+    g('bottom').style.display = 'none';
+    toast('← 이전 카드');
+  });
 
-    // S1 플래시카드
-    h += '<div class="screen" id="s1">'
-      + '<div class="fc-nav">'
-      + '<button class="fc-nav-btn" id="btn1st">↩ 처음으로</button>'
-      + '<div class="fc-counter" id="fcCnt">1 / ' + C.cards.length + '</div>'
-      + '<button class="fc-nav-btn" id="btnPrv" disabled>← 이전</button>'
-      + '</div>'
-      + '<div class="fc-card" id="fcCard"><div class="fc-inner">'
-      + '<div class="fc-front"><div class="fc-hint">탭해서 뜻 보기 👆</div>'
-      + '<div class="fc-word" id="fcWord"></div>'
-      + '<div class="fc-ph" id="fcPh"></div></div>'
-      + '<div class="fc-back"><div class="fc-hint" style="color:var(--gold-l)">뜻</div>'
-      + '<div class="fc-mean" id="fcMean"></div>'
-      + '<div class="fc-ex" id="fcEx"></div></div>'
-      + '</div></div>'
-      + '<div class="fc-btns" id="fcBtns" style="display:none">'
-      + '<button class="fc-btn fc-again" id="fcAgain">🔄 다시</button>'
-      + '<button class="fc-btn fc-know" id="fcKnow">✓ 알았어요</button>'
-      + '</div>'
-      + '<div class="fc-tip" id="fcTip">카드를 탭해서 뜻을 확인하세요</div>'
-      + '</div>';
+  // 오디오
+  g('audBtn').addEventListener('click', function () {
+    if (audOn) {
+      window.speechSynthesis.cancel();
+      this.classList.remove('on'); audOn = false; clearTimeout(audT);
+    } else {
+      this.classList.add('on'); audOn = true;
+      speak('For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.');
+      var self = this;
+      audT = setTimeout(function () { self.classList.remove('on'); audOn = false; }, 7000);
+    }
+  });
 
-    // S2 듣기
-    h += '<div class="screen" id="s2">'
-      + '<div class="verse-box">'
-      + '<div class="verse-ref">' + C.ref + '</div>'
-      + '<div class="verse-en">' + C.verseEn + '</div>'
-      + '<div class="verse-ko">' + C.verseKo + '</div>'
-      + '</div>'
-      + '<button class="aud-btn" id="audBtn">'
-      + '<span class="aud-lbl">🔊 원어민 발음 듣기</span>'
-      + '<div class="wave"><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div><div class="wbar"></div></div>'
-      + '</button>'
-      + '<div class="wb-box"><div class="wb-title">핵심 단어 발음</div>'
-      + C.wordList.map(function(w) {
-          return '<div class="wb-row"><div class="wb-word">' + w.w + '</div>'
-            + '<div class="wb-mean">' + w.m + '</div>'
-            + '<button class="wb-play" data-w="' + w.w + '">▶</button></div>';
-        }).join('')
-      + '</div></div>';
+  document.querySelectorAll('.wb-play').forEach(function (b) {
+    b.addEventListener('click', function () { speak(this.dataset.w); toast('🔊 ' + this.dataset.w); });
+  });
 
-    // S3 받아쓰기
-    h += '<div class="screen" id="s3">'
-      + '<div class="dict-box">'
-      + '<div class="dict-info">🎧 음성을 듣고 들리는 대로 영어로 받아쓰세요</div>'
-      + '<button class="dict-aud" id="dictAud">🔊 듣기 (3번까지 가능)</button>'
-      + '<textarea class="dict-in" id="dictIn" placeholder="들리는 영어 문장을 여기에 쓰세요..."></textarea>'
-      + '<div class="dict-hint">' + C.dictHint + '</div>'
-      + '<div class="dict-ans" id="dictAns">✓ 정답: ' + C.dictAnswer + '</div>'
-      + '</div>'
-      + '<button class="abtn sec" id="chkDict">정답 확인하기</button>'
-      + '</div>';
+  // 받아쓰기
+  g('dictAud').addEventListener('click', function () {
+    if (dN >= 3) { toast('최대 3번까지 들을 수 있어요'); return; }
+    dN++; this.textContent = '🔊 다시 듣기 (' + dN + '/3)';
+    speak('For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.');
+  });
 
-    // S4 스피킹
-    h += '<div class="screen" id="s4">'
-      + '<div class="spk-verse"><div class="spk-lbl">따라 말해보세요 🎤</div>'
-      + '<div class="spk-txt">"' + C.speakText + '"</div></div>'
-      + '<div class="mic-wrap">'
-      + '<button class="mic-btn" id="micBtn">🎤</button>'
-      + '<div class="mic-lbl" id="micLbl">버튼을 눌러 말하기 시작</div>'
-      + '</div>'
-      + '<div style="font-size:.76rem;color:var(--gray);text-align:center;margin-bottom:.9rem;font-family:\'Noto Serif KR\',serif;font-weight:300;">문장을 나눠서 연습해봐요</div>'
-      + '<div class="phrase-list">'
-      + C.phrases.map(function(ph, i) {
-          return '<div class="phrase-row" id="pr' + (i+1) + '">'
-            + '<span>▶</span><span class="pr-txt">"' + ph + '"</span>'
-            + '<span class="pr-chk">✓</span></div>';
-        }).join('')
-      + '</div></div>';
+  g('chkDict').addEventListener('click', function () {
+    g('dictAns').classList.add('show');
+    addXP(20); toast('✅ 정답 확인! +20 XP');
+  });
 
-    // S5 퀴즈
-    h += '<div class="screen" id="s5">'
-      + C.quizzes.map(function(q, qi) {
-          return '<div id="q' + (qi+1) + 'blk"' + (qi > 0 ? ' style="display:none"' : '') + '>'
-            + '<div class="q-box">'
-            + '<div class="q-type">' + q.type + '</div>'
-            + '<div class="q-num">문제 ' + (qi+1) + ' / ' + C.quizzes.length + '</div>'
-            + '<div class="q-txt">' + q.q + '</div>'
-            + '</div>'
-            + '<div class="q-opts" id="q' + (qi+1) + 'opts">'
-            + q.opts.map(function(o) {
-                var lt = String.fromCharCode(65 + q.opts.indexOf(o));
-                return '<button class="q-opt" data-v="' + o.v + '">'
-                  + '<span class="opt-lt">' + lt + '</span>' + o.label + '</button>';
-              }).join('')
-            + '</div>'
-            + '<div class="q-fb" id="q' + (qi+1) + 'fb"></div>'
-            + '</div>';
-        }).join('')
-      + '</div>';
+  // 스피킹
+  g('micBtn').addEventListener('click', function () {
+    if (!recOn) {
+      recOn = true; this.classList.add('rec'); this.textContent = '⏹';
+      g('micLbl').textContent = '말하는 중... 탭해서 멈추기';
+      speak('For God so loved the world that he gave his one and only Son');
+    } else {
+      recOn = false; this.classList.remove('rec'); this.textContent = '🎤';
+      g('micLbl').textContent = '잘 하셨어요! 다시 해볼까요?';
+      addXP(15); toast('🎤 훌륭해요! +15 XP');
+    }
+  });
 
-    // S6 영어 일기
-    h += '<div class="screen" id="s6">'
-      + '<div class="wr-prompt">'
-      + '<div class="wr-tag">오늘의 묵상 일기 ✍️</div>'
-      + '<div class="wr-txt">' + C.journalPrompt.replace('\n', '<br>') + '</div>'
-      + '</div>'
-      + '<div style="font-size:.78rem;color:var(--gray);margin-bottom:.6rem;font-family:\'Noto Serif KR\',serif;font-weight:300;">문장 시작이 막히면 아래를 탭해보세요</div>'
-      + '<div class="chips">'
-      + C.journalChips.map(function(c) {
-          return '<span class="chip" data-t="' + c.text + '">' + c.label + '</span>';
-        }).join('')
-      + '</div>'
-      + '<textarea class="wr-area" id="wrArea" placeholder="영어로 자유롭게 써보세요. 틀려도 괜찮아요 ✨"></textarea>'
-      + '<div class="wr-wc" id="wrWc">0 단어</div>'
-      + '</div>';
-
-    // S7 완료
-    h += '<div class="screen" id="s7">'
-      + '<div class="done-wrap">'
-      + '<div class="done-icon">🎉</div>'
-      + '<div class="done-title">챕터 <em>완료!</em></div>'
-      + '<div class="done-sub">오늘도 정말 잘 하셨어요!<br>' + C.doneMsg + '</div>'
-      + '<div class="xp-box"><div class="xp-tag">획득한 경험치</div>'
-      + '<div><span class="xp-num" id="doneXP">0</span> <span class="xp-u">XP</span></div></div>'
-      + '<div class="stats">'
-      + '<div class="s-box"><div class="s-num">' + C.cards.length + '</div><div class="s-lbl">단어 학습</div></div>'
-      + '<div class="s-box"><div class="s-num" id="doneQ">0/' + C.quizzes.length + '</div><div class="s-lbl">퀴즈 정답</div></div>'
-      + '<div class="s-box"><div class="s-num">🔥</div><div class="s-lbl">연속 학습</div></div>'
-      + '</div>'
-      + '<button class="abtn gold" style="width:100%;margin-bottom:.7rem" id="nextCh">'
-      + (C.nextChapter ? '다음 챕터 →' : '챕터 목록으로') + '</button>'
-      + '<button class="abtn sec" style="width:100%" id="homeBtn2">홈으로 돌아가기</button>'
-      + '</div></div>';
-
-    return h;
+  var phrases = ['For God so loved', 'the world', 'that he gave his one and only Son', 'shall not perish but have eternal life'];
+  for (var pi = 1; pi <= 4; pi++) {
+    (function (n) {
+      g('pr' + n).addEventListener('click', function () {
+        speak(phrases[n - 1]);
+        this.classList.add('done');
+        this.querySelector('.pr-chk').style.display = 'inline';
+        addXP(5);
+      });
+    })(pi);
   }
 
-  function bindEvents() {} // 이벤트는 initLearn 내부에서 처리
+  // 퀴즈
+  function setupQ(blkId, optId, fbId, correct, okMsg, ngMsg, nextBlk) {
+    document.querySelectorAll('#' + optId + ' .q-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var opts = document.querySelectorAll('#' + optId + ' .q-opt');
+        opts.forEach(function (o) { o.disabled = true; if (o.dataset.v === correct) o.classList.add('reveal'); });
+        var fb = g(fbId);
+        if (this.dataset.v === correct) {
+          this.classList.add('correct');
+          fb.className = 'q-fb show ok'; fb.textContent = okMsg;
+          qok++; addXP(20);
+        } else {
+          this.classList.add('wrong');
+          fb.className = 'q-fb show ng'; fb.textContent = ngMsg;
+        }
+        g('doneQ').textContent = qok + '/3';
+        if (nextBlk) {
+          setTimeout(function () {
+            g(blkId).style.display = 'none';
+            g(nextBlk).style.display = 'block';
+          }, 1200);
+        }
+      });
+    });
+  }
 
+  setupQ('q1blk', 'q1opts', 'q1fb', 'loved',
+    '✓ 정답! "loved"는 "사랑하셨다"입니다 💕',
+    '정답은 "loved"예요. 하나님이 세상을 사랑하셨다는 뜻이에요.', 'q2blk');
+  setupQ('q2blk', 'q2opts', 'q2fb', 'b',
+    '✓ 정답! "eternal life"는 영생, 영원한 삶이에요 🌟',
+    '"eternal"은 영원한, "life"는 삶 — 합치면 영생이에요!', 'q3blk');
+  setupQ('q3blk', 'q3opts', 'q3fb', 'a',
+    '✓ 정답! 하나님은 독생자 예수님을 보내주셨어요 ✝️',
+    '"he gave his one and only Son" — 독생자를 주셨다는 뜻이에요!', null);
+
+  // 글쓰기
+  document.querySelectorAll('.chip').forEach(function (c) {
+    c.addEventListener('click', function () {
+      var a = g('wrArea');
+      a.value = a.value ? a.value + ' ' + this.dataset.t : this.dataset.t;
+      a.focus(); wc();
+    });
+  });
+  g('wrArea').addEventListener('input', wc);
+  function wc() {
+    var t = g('wrArea').value.trim();
+    g('wrWc').textContent = (t ? t.split(/\s+/).length : 0) + ' 단어';
+  }
+
+  // 완료
+  g('nextCh').addEventListener('click', function () { toast('다음 챕터로 이동합니다!'); });
+  g('homeBtn2').addEventListener('click', function () { window.location.href = 'ivyel-app.html'; });
+
+  updateProg(); updateBtns();
 })();
 </script>
 </body>
