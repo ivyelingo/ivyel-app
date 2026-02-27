@@ -1350,6 +1350,11 @@ textarea.m-input { min-height: 100px; resize: none; }
           <span class="pi-label">내 학습 자료</span>
           <span class="pi-arrow">›</span>
         </div>
+        <div class="profile-item" onclick="openMyJournals()">
+          <span class="pi-icon">📔</span>
+          <span class="pi-label">내 학습 일기</span>
+          <span class="pi-arrow">›</span>
+        </div>
         <div class="profile-item" onclick="window.location.href='ivyel-packages.html'">
           <span class="pi-icon">💳</span>
           <span class="pi-label">결제 & 패키지 관리</span>
@@ -2526,6 +2531,52 @@ async function loadCoachStudents() {
     if (statEls[0]) statEls[0].textContent = 3 + students.length;
     listEl.innerHTML = html;
   } catch(err) { console.error(err); listEl.innerHTML = ''; }
+}
+
+// ── 내 학습 일기 모달 ──
+async function openMyJournals() {
+  document.getElementById('modalTitle').textContent = '📔 내 학습 일기';
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  var user = window._currentUser;
+  if (!user) { document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:1rem;color:var(--gray);">로그인이 필요해요</div>'; return; }
+
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'journals'),
+      mod.where('uid', '==', user.uid),
+      mod.orderBy('savedAt', 'desc')
+    ));
+
+    if (snap.empty) {
+      document.getElementById('modalBody').innerHTML = `
+        <div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">
+          📭 아직 작성한 일기가 없어요<br>
+          <span style="font-size:.75rem;">학습 챕터를 완료하면 일기가 쌓여요 ✍️</span>
+        </div>`;
+      return;
+    }
+
+    var html = '<div style="font-size:.72rem;color:var(--gray);background:var(--cream);border-radius:8px;padding:.5rem .8rem;margin-bottom:.8rem;">나만 볼 수 있는 개인 기록이에요 🔒</div>';
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      var date = d.savedAt ? new Date(d.savedAt.seconds * 1000).toLocaleDateString('ko-KR', {month:'long', day:'numeric'}) : '';
+      html += '<div style="background:var(--warm);border:1.5px solid var(--light);border-radius:14px;padding:.9rem 1rem;margin-bottom:.6rem;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">'
+        + '<span style="font-size:.72rem;font-weight:600;color:var(--rose);">✝️ ' + (d.chapterTitle||d.chapterId) + '</span>'
+        + '<span style="font-size:.65rem;color:var(--gray);">' + date + '</span>'
+        + '</div>'
+        + '<div style="font-size:.85rem;line-height:1.7;color:var(--charcoal);">' + d.content + '</div>'
+        + '<div style="font-size:.65rem;color:var(--gray);margin-top:.4rem;">' + (d.wordCount||0) + ' 단어</div>'
+        + '</div>';
+    });
+    document.getElementById('modalBody').innerHTML = html;
+  } catch(err) {
+    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패: ' + err.message + '</div>';
+    console.error(err);
+  }
 }
 
 // ── 내 정보: 학습 자료 (수강 확정 수업 기반) ──

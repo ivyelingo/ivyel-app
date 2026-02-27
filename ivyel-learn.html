@@ -267,6 +267,29 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
     });
   });
 
+  // ── 일기 저장 (개인 기록용) ──
+  function saveJournal(chapterId, chapterTitle, text) {
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js').then(function(authMod) {
+      import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(function(mod) {
+        var auth = authMod.getAuth();
+        var user = auth.currentUser;
+        if (!user) return; // 비로그인이면 저장 생략
+        mod.addDoc(mod.collection(mod.getFirestore(), 'journals'), {
+          uid:          user.uid,
+          chapterId:    chapterId,
+          chapterTitle: chapterTitle,
+          content:      text,
+          wordCount:    text.split(/\s+/).filter(Boolean).length,
+          savedAt:      mod.serverTimestamp()
+        }).then(function() {
+          toast('📔 일기가 저장됐어요!');
+        }).catch(function(err) {
+          console.error('일기 저장 실패', err);
+        });
+      });
+    });
+  }
+
   // ── 기본 챕터 데이터 (John 3:16) - Firebase 없이도 동작 ──
   function getDefaultChapter() {
     return {
@@ -381,8 +404,11 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
 
     g('mainBtn').addEventListener('click', function() {
       if (cur === 6) {
-        if (g('wrArea').value.trim().length < 5) { toast('영어로 한 문장만 써도 괜찮아요 ✨'); return; }
+        var journalText = g('wrArea').value.trim();
+        if (journalText.length < 5) { toast('영어로 한 문장만 써도 괜찮아요 ✨'); return; }
         addXP(30);
+        // Firebase에 일기 저장 (학생 개인 기록용 - 코치에게 비공개)
+        saveJournal(C.id, C.title, journalText);
       }
       if (cur < TOTAL - 1) goTo(cur + 1);
     });
