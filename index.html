@@ -3315,59 +3315,122 @@ async function openChapterListModal() {
 
   try {
     var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    var snap = await mod.getDocs(mod.query(
-      mod.collection(window._db, 'chapters'),
-      mod.where('published', '==', true),
-      mod.orderBy('track'), mod.orderBy('chapterNum')
-    ));
 
+    // 단순 전체 조회 (인덱스 불필요) → 클라이언트에서 필터·정렬
+    var snap = await mod.getDocs(mod.collection(window._db, 'chapters'));
+
+    // Firebase에 챕터가 없으면 기본 챕터(John 3:16) 자동 삽입
     if (snap.empty) {
-      document.getElementById('modalBody').innerHTML = `
-        <div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">
-          📭 아직 업로드된 챕터가 없어요<br>
-          <span style="font-size:.75rem;">코치님이 곧 업로드해주실 거예요!</span>
-        </div>`;
+      await seedDefaultChapter(mod);
+      snap = await mod.getDocs(mod.collection(window._db, 'chapters'));
+    }
+
+    var docs = [];
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      if (d.published !== false) docs.push({ id: ds.id, data: d });
+    });
+    docs.sort(function(a, b) {
+      var ta = a.data.track || '', tb = b.data.track || '';
+      if (ta !== tb) return ta.localeCompare(tb);
+      return (a.data.chapterNum || 0) - (b.data.chapterNum || 0);
+    });
+
+    if (docs.length === 0) {
+      document.getElementById('modalBody').innerHTML =
+        '<div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">📭 아직 업로드된 챕터가 없어요</div>';
       return;
     }
 
-    // 트랙별 그룹핑
     var grouped = {};
-    snap.forEach(function(ds) {
-      var d = ds.data();
-      var k = d.track || 'etc';
+    docs.forEach(function(item) {
+      var k = item.data.track || 'etc';
       if (!grouped[k]) grouped[k] = [];
-      grouped[k].push({ id: ds.id, data: d });
+      grouped[k].push(item);
     });
 
     var html = '<div style="font-size:.72rem;color:var(--gray);background:var(--cream);border-radius:8px;padding:.5rem .8rem;margin-bottom:.8rem;">챕터를 탭하면 바로 학습이 시작돼요 🎯</div>';
-
     Object.keys(grouped).forEach(function(track) {
       html += '<div style="margin-bottom:1rem;">'
         + '<div style="font-size:.75rem;font-weight:600;color:var(--gray);margin-bottom:.4rem;">'
-        + (_classEmoji[track]||'📚') + ' ' + (_trackNames[track]||track)
-        + '</div>';
-
+        + (_classEmoji[track]||'📚') + ' ' + (_trackNames[track]||track) + '</div>';
       grouped[track].forEach(function(item) {
         var d = item.data;
         html += '<div onclick="startChapter(\'' + item.id + '\')" style="display:flex;align-items:center;gap:.7rem;padding:.7rem .5rem;border-radius:12px;border:1.5px solid var(--light);margin-bottom:.4rem;cursor:pointer;background:var(--warm);">'
           + '<span style="font-size:1.3rem;">' + (d.icon||'📖') + '</span>'
           + '<div style="flex:1;">'
           + '<div style="font-size:.85rem;font-weight:600;">' + d.chapter + ' ' + d.title + '</div>'
-          + '<div style="font-size:.68rem;color:var(--gray);margin-top:.1rem;">'
-          + '단어 ' + (d.cards||[]).length + '개 · 퀴즈 ' + (d.quizzes||[]).length + '개 · 약 20분'
-          + '</div>'
-          + '</div>'
-          + '<span style="font-size:.85rem;color:var(--rose);">→</span>'
-          + '</div>';
+          + '<div style="font-size:.68rem;color:var(--gray);margin-top:.1rem;">단어 ' + (d.cards||[]).length + '개 · 퀴즈 ' + (d.quizzes||[]).length + '개 · 약 20분</div>'
+          + '</div><span style="font-size:.85rem;color:var(--rose);">→</span></div>';
       });
       html += '</div>';
     });
-
     document.getElementById('modalBody').innerHTML = html;
+
   } catch(err) {
-    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
+    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패: ' + err.message + '</div>';
     console.error(err);
   }
+}
+
+// ── 기본 챕터 (John 3:16) 자동 삽입 ──
+async function seedDefaultChapter(mod) {
+  var defaultChapter = {
+    id: 'bible-01',
+    track: 'bible',
+    trackName: '성경영어',
+    chapterNum: 1,
+    chapter: 'Ch.1',
+    title: '하나님의 사랑',
+    icon: '✝️',
+    ref: 'John 3:16 — 요한복음 3장 16절',
+    verse: '"For God so loved the world..."',
+    desc: '요한복음 3:16을 영어로 읽고 듣고 말하고 써봐요 · 약 20분',
+    doneMsg: '"For God so loved the world"\n이 말씀이 마음에 새겨지길 바랍니다 💕',
+    verseEn: '"For <b>God</b> so <b>loved</b> the <b>world</b> that he gave his one and only <b>Son</b>, that whoever <b>believes</b> in him shall not <b>perish</b> but have <b>eternal</b> life."',
+    verseKo: '하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라',
+    verseAudio: 'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+    speakText: 'For God so loved the world that he gave his one and only Son',
+    dictHint: '힌트: "For God so _____ the world..."',
+    dictAnswer: '"For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life."',
+    cards: [
+      { w:'loved',    p:'[lʌvd]',      m:'사랑하셨다', e:'"For God so loved the world"\n하나님이 세상을 이처럼 사랑하셨으니' },
+      { w:'world',    p:'[wɜːrld]',     m:'세상',       e:'"he loved the world"\n세상을 사랑하사' },
+      { w:'gave',     p:'[ɡeɪv]',       m:'주셨다',     e:'"he gave his one and only Son"\n독생자를 주셨으니' },
+      { w:'believes', p:'[bɪˈliːvz]',   m:'믿는',       e:'"whoever believes in him"\n그를 믿는 자마다' },
+      { w:'eternal',  p:'[ɪˈtɜːrnl]',   m:'영원한',     e:'"have eternal life"\n영생을 얻게 하려 하심이라' }
+    ],
+    wordList: [
+      { w:'God',      m:'하나님 [gɑːd]' },
+      { w:'loved',    m:'사랑하셨다 [lʌvd]' },
+      { w:'world',    m:'세상 [wɜːrld]' },
+      { w:'believes', m:'믿는 [bɪˈliːvz]' },
+      { w:'eternal',  m:'영원한 [ɪˈtɜːrnl]' }
+    ],
+    phrases: ['For God so loved','the world','that he gave his one and only Son','shall not perish but have eternal life'],
+    quizzes: [
+      { type:'빈칸 채우기', q:'"For God so <b>____</b> the world"',
+        opts:[{v:'likes',label:'likes'},{v:'loved',label:'loved'},{v:'made',label:'made'},{v:'saved',label:'saved'}],
+        answer:'loved', ok:'✓ 정답! "loved"는 "사랑하셨다"입니다 💕', ng:'정답은 "loved"예요. 하나님이 세상을 사랑하셨다는 뜻이에요.' },
+      { type:'뜻 고르기', q:'"eternal life"의 뜻은?',
+        opts:[{v:'a',label:'아름다운 삶'},{v:'b',label:'영생 (영원한 삶)'},{v:'c',label:'축복'},{v:'d',label:'구원'}],
+        answer:'b', ok:'✓ 정답! "eternal life"는 영생, 영원한 삶이에요 🌟', ng:'"eternal"은 영원한, "life"는 삶 — 합치면 영생이에요!' },
+      { type:'문장 완성', q:'하나님이 세상에 주신 것은?',
+        opts:[{v:'a',label:'His only Son (독생자)'},{v:'b',label:'The Bible (성경)'},{v:'c',label:'Eternal peace (영원한 평화)'},{v:'d',label:'His blessing (축복)'}],
+        answer:'a', ok:'✓ 정답! 하나님은 독생자 예수님을 보내주셨어요 ✝️', ng:'"he gave his one and only Son" — 독생자를 주셨다는 뜻이에요!' }
+    ],
+    journalPrompt: '오늘 배운 하나님의 사랑에 대해\n영어로 짧게 써봐요.',
+    journalChips: [
+      { label:'Today I learned that...', text:'Today I learned that ' },
+      { label:"God's love makes me feel...", text:"God's love makes me feel " },
+      { label:'I am grateful because...', text:'I am grateful because ' },
+      { label:'John 3:16 reminds me...', text:'John 3:16 reminds me that ' }
+    ],
+    nextChapter: null,
+    published: true,
+    createdAt: mod.serverTimestamp()
+  };
+  await mod.setDoc(mod.doc(window._db, 'chapters', 'bible-01'), defaultChapter);
 }
 
 function startChapter(chapterId) {
