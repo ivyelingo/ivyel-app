@@ -224,6 +224,12 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
   }
 
   // ── Firebase에서 챕터 로드 ──
+  // bible-01은 내장 데이터 우선 사용 (Firebase 불완전 데이터 방지)
+  if (chId === 'bible-01') {
+    initLearn(getDefaultChapter());
+    return;
+  }
+
   import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js').then(function(appMod) {
     import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(function(mod) {
       var firebaseConfig = {
