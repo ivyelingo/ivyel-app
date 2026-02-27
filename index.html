@@ -1570,6 +1570,17 @@ function showAppAfterLogin(userData) {
     if (ca) { ca.textContent = initial; ca.style.background = ''; ca.style.color = ''; }
     if (wb) wb.style.borderColor = '';
   }
+
+  // ── URL 해시로 탭 자동 이동 (예: index.html#classes) ──
+  var hashTab = window.location.hash.replace('#', '');
+  var validTabs = ['home','classes','homework','community','profile'];
+  if (hashTab && validTabs.indexOf(hashTab) !== -1) {
+    setTimeout(function() {
+      var navBtn = document.querySelector('.nav-item[onclick*="\'' + hashTab + '\'"]');
+      switchPage(hashTab, navBtn);
+      window.history.replaceState({}, '', window.location.pathname);
+    }, 400);
+  }
 }
 
 // ── 커뮤니티 글쓰기 제출 ──
