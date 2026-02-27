@@ -971,7 +971,7 @@ textarea.m-input { min-height: 100px; resize: none; }
           <div class="q-label">커뮤니티</div>
           <div class="q-sub" id="quick-community">확인 중...</div>
         </div>
-        <div class="quick-card" onclick="window.location.href='ivyel-learn.html'">
+        <div class="quick-card" onclick="openChapterListModal()">
           <span class="q-icon">📚</span>
           <div class="q-label">학습 자료</div>
           <div class="q-sub">이번 주 자료</div>
@@ -1301,6 +1301,14 @@ textarea.m-input { min-height: 100px; resize: none; }
         <div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">불러오는 중...</div>
       </div>
 
+      <!-- 학습 챕터 관리 -->
+      <div class="sec-title" style="font-size:1.1rem;margin-top:1.4rem;">학습 <em>챕터 관리</em></div>
+      <div class="sec-sub" style="margin-bottom:.8rem;">단어·구절·퀴즈를 입력하면 학생 앱에 바로 반영돼요</div>
+      <button onclick="openChapterModal()" style="width:100%;background:linear-gradient(135deg,var(--sage),#5a9a60);color:white;border:none;border-radius:14px;padding:.85rem;font-size:.88rem;font-family:'DM Sans',sans-serif;cursor:pointer;margin-bottom:.8rem;">📖 새 챕터 만들기</button>
+      <div id="coach-chapter-list">
+        <div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">불러오는 중...</div>
+      </div>
+
     </div>
 
     <!-- PROFILE -->
@@ -1526,7 +1534,7 @@ function showAppAfterLogin(userData) {
       coachNav.className = 'nav-item';
       coachNav.id = 'coachNavBtn';
       coachNav.innerHTML = '<span class="nav-icon">👩‍🏫</span><span class="nav-label">관리</span>';
-      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachMaterials(); loadCoachPackageRequests(); updateApiKeyStatus(); };
+      coachNav.onclick = function() { switchPage('coach', this); loadCoachSubmissions(); loadCoachEnrollments(); loadCoachStudents(); loadCoachMaterials(); loadCoachChapters(); loadCoachPackageRequests(); updateApiKeyStatus(); };
       lastNav.parentNode.insertBefore(coachNav, lastNav);
     }
     // 커뮤니티 글쓰기 박스 - 코치 전용 스타일
@@ -1541,6 +1549,7 @@ function showAppAfterLogin(userData) {
     setTimeout(loadCoachEnrollments, 600);
     setTimeout(loadCoachStudents, 700);
     setTimeout(loadCoachMaterials, 800);
+    setTimeout(loadCoachChapters, 820);
     setTimeout(loadCoachPackageRequests, 850);
     setTimeout(updateApiKeyStatus, 900);
     setTimeout(loadCommunityPosts, 900); // 커뮤니티도 동일 함수 사용
@@ -2849,6 +2858,199 @@ async function confirmEnroll(docId, studentName, className, classKey) {
 }
 
 // ══════════════════════════════════════════
+// 챕터 관리 (코치)
+// ══════════════════════════════════════════
+
+var _trackNames = { 'bible':'성경영어','speaking':'영어 회화','writing':'영어 글쓰기','coaching':'영어 코칭','kids':'키즈 영어' };
+
+// ── 챕터 생성/수정 모달 ──
+function openChapterModal(editId, editData) {
+  var isEdit = !!editId;
+  var d = editData || {};
+
+  var trackOpts = Object.keys(_trackNames).map(function(k) {
+    return '<option value="' + k + '"' + (d.track === k ? ' selected' : '') + '>' + _classEmoji[k] + ' ' + _trackNames[k] + '</option>';
+  }).join('');
+
+  // 단어 기본값 (5개)
+  var cardsVal = d.cards ? d.cards.map(function(c) {
+    return c.w + '|' + c.p + '|' + c.m + '|' + c.e;
+  }).join('\n') : 'loved|[lʌvd]|사랑하셨다|"For God so loved the world"\n예문을 입력하세요';
+
+  // 퀴즈 기본값
+  var quizVal = d.quizzes ? d.quizzes.map(function(q) {
+    return q.q + '|' + q.answer + '|' + q.opts.map(function(o){ return o.v + ':' + o.label; }).join(',') + '|' + q.ok + '|' + q.ng;
+  }).join('\n') : '';
+
+  document.getElementById('modalTitle').textContent = isEdit ? '✏️ 챕터 수정' : '📖 새 챕터 만들기';
+  document.getElementById('modalBody').innerHTML = `
+    <div style="font-size:.72rem;color:var(--gray);background:var(--cream);border-radius:8px;padding:.6rem .8rem;margin-bottom:.8rem;line-height:1.6;">
+      💡 입력한 내용이 학생 앱 학습 화면에 바로 반영돼요
+    </div>
+
+    <div style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;">트랙 · 챕터번호</div>
+    <div style="display:flex;gap:.5rem;margin-bottom:.7rem;">
+      <select class="m-input" id="chTrack" style="flex:2;">${trackOpts}</select>
+      <input class="m-input" id="chNum" type="number" placeholder="1" min="1" value="${d.chapterNum||''}" style="flex:1;">
+    </div>
+
+    <input class="m-input" id="chTitle" placeholder="챕터 제목 (예: 하나님의 사랑)" value="${d.title||''}">
+    <input class="m-input" id="chIcon" placeholder="아이콘 이모지 (예: ✝️)" value="${d.icon||'✝️'}">
+    <input class="m-input" id="chVerse" placeholder="대표 구절 (예: John 3:16)" value="${d.ref||''}">
+    <textarea class="m-input" id="chVerseEn" rows="3" placeholder="영어 구절 전문 (HTML 가능, <b>강조</b>)">${d.verseEn||''}</textarea>
+    <textarea class="m-input" id="chVerseKo" rows="2" placeholder="한국어 번역">${d.verseKo||''}</textarea>
+    <input class="m-input" id="chVerseAudio" placeholder="TTS 발음용 구절 (영어 원문 그대로)" value="${d.verseAudio||''}">
+    <input class="m-input" id="chSpeakText" placeholder="따라말하기 구절 (짧게)" value="${d.speakText||''}">
+
+    <div style="font-size:.78rem;font-weight:600;margin:.6rem 0 .3rem;">📇 단어 카드</div>
+    <div style="font-size:.68rem;color:var(--gray);margin-bottom:.4rem;">한 줄에 단어 하나 · 형식: 단어|발음|뜻|예문</div>
+    <textarea class="m-input" id="chCards" rows="6" placeholder="loved|[lʌvd]|사랑하셨다|예문...">${cardsVal}</textarea>
+
+    <div style="font-size:.78rem;font-weight:600;margin:.6rem 0 .3rem;">❓ 퀴즈 (선택)</div>
+    <div style="font-size:.68rem;color:var(--gray);margin-bottom:.4rem;">형식: 문제|정답키|A:보기,B:보기,C:보기,D:보기|정답메시지|오답메시지</div>
+    <textarea class="m-input" id="chQuizzes" rows="5" placeholder='예) "For God so ___ the world"|loved|A:likes,B:loved,C:made,D:saved|✓ 정답!|다시 도전해봐요'>${quizVal}</textarea>
+
+    <div style="font-size:.78rem;font-weight:600;margin:.6rem 0 .3rem;">📝 묵상 일기 프롬프트</div>
+    <textarea class="m-input" id="chJournal" rows="2" placeholder="오늘 배운 내용에 대해 영어로 써봐요.">${d.journalPrompt||''}</textarea>
+
+    <button class="m-btn" id="chSaveBtn" onclick="saveChapter('${editId||''}')">
+      ${isEdit ? '수정하기 →' : '챕터 저장하기 →'}
+    </button>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+// ── 챕터 저장 ──
+async function saveChapter(editId) {
+  var title  = (document.getElementById('chTitle')||{}).value.trim();
+  var track  = (document.getElementById('chTrack')||{}).value;
+  var num    = parseInt((document.getElementById('chNum')||{}).value) || 1;
+  var cardsRaw = (document.getElementById('chCards')||{}).value.trim();
+
+  if (!title)    { showToast('챕터 제목을 입력해주세요'); return; }
+  if (!cardsRaw) { showToast('단어 카드를 입력해주세요'); return; }
+
+  // 단어 파싱 (단어|발음|뜻|예문)
+  var cards = cardsRaw.split('\n').filter(function(l){ return l.trim(); }).map(function(line) {
+    var p = line.split('|');
+    return { w: (p[0]||'').trim(), p: (p[1]||'').trim(), m: (p[2]||'').trim(), e: (p[3]||'').trim() };
+  }).filter(function(c){ return c.w; });
+
+  // 퀴즈 파싱 (문제|정답|A:보기,...|정답메시지|오답메시지)
+  var quizRaw = (document.getElementById('chQuizzes')||{}).value.trim();
+  var quizzes = quizRaw ? quizRaw.split('\n').filter(function(l){ return l.trim(); }).map(function(line) {
+    var p = line.split('|');
+    var opts = (p[2]||'').split(',').map(function(o, i) {
+      var kv = o.split(':');
+      return { v: (kv[0]||String.fromCharCode(65+i)).trim(), label: (kv[1]||o).trim() };
+    });
+    return { type:'퀴즈', q:(p[0]||'').trim(), answer:(p[1]||'').trim(), opts:opts, ok:(p[3]||'✓ 정답!').trim(), ng:(p[4]||'다시 도전해봐요').trim() };
+  }).filter(function(q){ return q.q; }) : [];
+
+  // 단어 목록 (듣기 화면용)
+  var wordList = cards.map(function(c) {
+    return { w: c.w, m: c.m + ' ' + c.p };
+  });
+
+  var chapterId = track + '-' + String(num).padStart(2,'0');
+  var data = {
+    id: chapterId,
+    track: track,
+    trackName: _trackNames[track] || track,
+    chapterNum: num,
+    chapter: 'Ch.' + num,
+    title: title,
+    icon: (document.getElementById('chIcon')||{}).value.trim() || '📖',
+    ref: (document.getElementById('chVerse')||{}).value.trim(),
+    verse: '"' + (document.getElementById('chSpeakText')||{}).value.trim() + '..."',
+    desc: _trackNames[track] + ' · 약 20분',
+    doneMsg: title + '\n잘 하셨어요! 💕',
+    verseEn: (document.getElementById('chVerseEn')||{}).value.trim(),
+    verseKo: (document.getElementById('chVerseKo')||{}).value.trim(),
+    verseAudio: (document.getElementById('chVerseAudio')||{}).value.trim(),
+    speakText: (document.getElementById('chSpeakText')||{}).value.trim(),
+    dictHint: '힌트: "' + (cards[0]||{}).w + '..."',
+    dictAnswer: (document.getElementById('chVerseAudio')||{}).value.trim(),
+    cards: cards,
+    wordList: wordList,
+    phrases: cards.slice(0,4).map(function(c){ return c.w; }),
+    quizzes: quizzes,
+    journalPrompt: (document.getElementById('chJournal')||{}).value.trim() || '오늘 배운 내용에 대해 영어로 써봐요.',
+    journalChips: [
+      { label:'Today I learned...', text:'Today I learned ' },
+      { label:'I am grateful...', text:'I am grateful because ' }
+    ],
+    nextChapter: null,
+    published: true,
+    updatedAt: null
+  };
+
+  var btn = document.getElementById('chSaveBtn');
+  btn.textContent = '저장 중...'; btn.disabled = true;
+
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    data.updatedAt = mod.serverTimestamp();
+    if (editId) {
+      await mod.updateDoc(mod.doc(window._db, 'chapters', editId), data);
+      showToast('✅ 챕터를 수정했어요!');
+    } else {
+      data.createdAt = mod.serverTimestamp();
+      data.createdBy = window._currentUser.uid;
+      await mod.setDoc(mod.doc(window._db, 'chapters', chapterId), data);
+      showToast('✅ 챕터를 저장했어요! 학생 앱에 바로 반영됐어요 🎉');
+    }
+    closeModal();
+    loadCoachChapters();
+  } catch(err) {
+    showToast('저장 실패. 다시 시도해주세요.');
+    btn.textContent = '챕터 저장하기 →'; btn.disabled = false;
+    console.error(err);
+  }
+}
+
+// ── 코치: 챕터 목록 로드 ──
+async function loadCoachChapters() {
+  var listEl = document.getElementById('coach-chapter-list');
+  if (!listEl) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'chapters'),
+      mod.orderBy('track'), mod.orderBy('chapterNum')
+    ));
+    if (snap.empty) {
+      listEl.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--gray);font-size:.82rem;">아직 만든 챕터가 없어요<br><span style="font-size:.72rem;">위 버튼으로 첫 챕터를 만들어보세요 📖</span></div>';
+      return;
+    }
+    var html = '';
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      html += '<div style="display:flex;align-items:center;gap:.6rem;padding:.6rem .5rem;border-bottom:1px solid var(--light);">'
+        + '<span style="font-size:1rem;">' + (d.icon||'📖') + '</span>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:.83rem;font-weight:500;">' + d.chapter + ' ' + d.title + '</div>'
+        + '<div style="font-size:.65rem;color:var(--gray);">' + (_classEmoji[d.track]||'') + ' ' + (d.trackName||d.track) + ' · 단어 ' + (d.cards||[]).length + '개 · 퀴즈 ' + (d.quizzes||[]).length + '개</div>'
+        + '</div>'
+        + '<button onclick="openChapterModal(\'' + ds.id + '\',' + JSON.stringify(d).replace(/'/g,'&apos;') + ')" style="font-size:.68rem;background:none;border:1px solid var(--light);border-radius:20px;padding:.2rem .5rem;cursor:pointer;color:var(--gray);">수정</button>'
+        + '<button onclick="deleteChapter(\'' + ds.id + '\')" style="font-size:.68rem;background:none;border:1px solid var(--rose-light);border-radius:20px;padding:.2rem .5rem;cursor:pointer;color:var(--rose);">삭제</button>'
+        + '</div>';
+    });
+    listEl.innerHTML = html;
+  } catch(err) { console.error(err); }
+}
+
+// ── 챕터 삭제 ──
+async function deleteChapter(docId) {
+  if (!confirm('이 챕터를 삭제할까요?')) return;
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await mod.deleteDoc(mod.doc(window._db, 'chapters', docId));
+    showToast('삭제됐어요');
+    loadCoachChapters();
+  } catch(err) { showToast('삭제 실패'); console.error(err); }
+}
+
+// ══════════════════════════════════════════
 // 학습 자료 관리
 // ══════════════════════════════════════════
 
@@ -3101,6 +3303,74 @@ async function markPackageChecked(docId) {
     showToast('✅ 확인 완료!');
     loadCoachPackageRequests();
   } catch(err) { showToast('실패했어요'); console.error(err); }
+}
+
+// ── 학생: 챕터 목록 모달 ──
+async function openChapterListModal() {
+  document.getElementById('modalTitle').textContent = '📖 학습 챕터';
+  document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--gray);font-size:.85rem;">불러오는 중...</div>';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  try {
+    var mod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    var snap = await mod.getDocs(mod.query(
+      mod.collection(window._db, 'chapters'),
+      mod.where('published', '==', true),
+      mod.orderBy('track'), mod.orderBy('chapterNum')
+    ));
+
+    if (snap.empty) {
+      document.getElementById('modalBody').innerHTML = `
+        <div style="text-align:center;padding:2rem;color:var(--gray);font-size:.85rem;">
+          📭 아직 업로드된 챕터가 없어요<br>
+          <span style="font-size:.75rem;">코치님이 곧 업로드해주실 거예요!</span>
+        </div>`;
+      return;
+    }
+
+    // 트랙별 그룹핑
+    var grouped = {};
+    snap.forEach(function(ds) {
+      var d = ds.data();
+      var k = d.track || 'etc';
+      if (!grouped[k]) grouped[k] = [];
+      grouped[k].push({ id: ds.id, data: d });
+    });
+
+    var html = '<div style="font-size:.72rem;color:var(--gray);background:var(--cream);border-radius:8px;padding:.5rem .8rem;margin-bottom:.8rem;">챕터를 탭하면 바로 학습이 시작돼요 🎯</div>';
+
+    Object.keys(grouped).forEach(function(track) {
+      html += '<div style="margin-bottom:1rem;">'
+        + '<div style="font-size:.75rem;font-weight:600;color:var(--gray);margin-bottom:.4rem;">'
+        + (_classEmoji[track]||'📚') + ' ' + (_trackNames[track]||track)
+        + '</div>';
+
+      grouped[track].forEach(function(item) {
+        var d = item.data;
+        html += '<div onclick="startChapter(\'' + item.id + '\')" style="display:flex;align-items:center;gap:.7rem;padding:.7rem .5rem;border-radius:12px;border:1.5px solid var(--light);margin-bottom:.4rem;cursor:pointer;background:var(--warm);">'
+          + '<span style="font-size:1.3rem;">' + (d.icon||'📖') + '</span>'
+          + '<div style="flex:1;">'
+          + '<div style="font-size:.85rem;font-weight:600;">' + d.chapter + ' ' + d.title + '</div>'
+          + '<div style="font-size:.68rem;color:var(--gray);margin-top:.1rem;">'
+          + '단어 ' + (d.cards||[]).length + '개 · 퀴즈 ' + (d.quizzes||[]).length + '개 · 약 20분'
+          + '</div>'
+          + '</div>'
+          + '<span style="font-size:.85rem;color:var(--rose);">→</span>'
+          + '</div>';
+      });
+      html += '</div>';
+    });
+
+    document.getElementById('modalBody').innerHTML = html;
+  } catch(err) {
+    document.getElementById('modalBody').innerHTML = '<div style="color:var(--rose);text-align:center;padding:1rem;font-size:.82rem;">불러오기 실패</div>';
+    console.error(err);
+  }
+}
+
+function startChapter(chapterId) {
+  closeModal();
+  window.location.href = 'ivyel-learn.html?ch=' + chapterId;
 }
 
 // ── API 키 관리 ──

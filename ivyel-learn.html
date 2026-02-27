@@ -223,17 +223,33 @@ body{background:var(--cream);font-family:'DM Sans',sans-serif;color:var(--dark);
     window.speechSynthesis.speak(u);
   }
 
-  // ── JSON 로드 ──
-  fetch('chapters/ch-' + chId + '.json')
-    .then(function(r) {
-      if (!r.ok) throw new Error('챕터를 찾을 수 없어요');
-      return r.json();
-    })
-    .then(function(C) { initLearn(C); })
-    .catch(function(err) {
-      g('screenWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:#C4998A;">'
-        + '📭 챕터를 불러올 수 없어요<br><span style="font-size:.8rem;color:#999;">(' + err.message + ')</span></div>';
+  // ── Firebase에서 챕터 로드 ──
+  import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js').then(function(appMod) {
+    import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(function(mod) {
+      var firebaseConfig = {
+        apiKey: "AIzaSyC3LVXK15TKQoNBhkQMGT2dBSMCuHZFBSs",
+        authDomain: "ivyel-elingo.firebaseapp.com",
+        projectId: "ivyel-elingo",
+        storageBucket: "ivyel-elingo.appspot.com",
+        messagingSenderId: "1097546487501",
+        appId: "1:1097546487501:web:04e51bfde36c66be5b4299"
+      };
+      var app = appMod.initializeApp(firebaseConfig);
+      var db  = mod.getFirestore(app);
+
+      mod.getDoc(mod.doc(db, 'chapters', chId)).then(function(snap) {
+        if (!snap.exists()) {
+          g('screenWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:#C4998A;">'
+            + '📭 챕터를 찾을 수 없어요<br><span style="font-size:.8rem;color:#999;">(id: ' + chId + ')</span></div>';
+          return;
+        }
+        initLearn(snap.data());
+      }).catch(function(err) {
+        g('screenWrap').innerHTML = '<div style="padding:2rem;text-align:center;color:#C4998A;">'
+          + '📭 불러오기 실패<br><span style="font-size:.8rem;color:#999;">' + err.message + '</span></div>';
+      });
     });
+  });
 
   // ── 학습 초기화 ──
   function initLearn(C) {
