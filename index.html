@@ -3330,8 +3330,10 @@ async function openChapterListModal() {
     // 단순 전체 조회 (인덱스 불필요) → 클라이언트에서 필터·정렬
     var snap = await mod.getDocs(mod.collection(window._db, 'chapters'));
 
-    // Firebase에 챕터가 없으면 기본 챕터(John 3:16) 자동 삽입
-    if (snap.empty) {
+    // bible-01이 없거나 cards 필드가 비어있으면 기본 챕터 삽입/덮어쓰기
+    var hasBible01 = false;
+    snap.forEach(function(ds) { if (ds.id === 'bible-01' && (ds.data().cards||[]).length > 0) hasBible01 = true; });
+    if (!hasBible01) {
       await seedDefaultChapter(mod);
       snap = await mod.getDocs(mod.collection(window._db, 'chapters'));
     }
